@@ -91,7 +91,6 @@
           <div class="hero-aurora" aria-hidden="true"></div>
           <div class="hero-grid">
             <div class="hero-text">
-              <p class="pill-badge pill-badge--light"><span class="dot dot--live"></span>ИИ-администраторы для малого бизнеса</p>
               <h1 id="hero-title" class="hero-title">
                 Ваш бизнес теряет заявки,
                 <span class="sr-only">пока вы спите, в выходные или когда администратор занят?</span>
@@ -182,81 +181,127 @@
           <h2 id="services-title">Что мы делаем для вашего бизнеса</h2>
         </div>
 
-        <div class="services-grid">
-          <article class="card service reveal-up" style="--i:0">
-            <div class="service-top">
-              <span class="icon-box icon-box--ink"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4 4v-4h.5A2.5 2.5 0 0 1 4 13.5z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/></svg></span>
-              <span class="tag tag--lime">Хит</span>
+        <div class="svc-grid">
+          <article class="svc-card svc-card--ink reveal-up" style="--i:0" aria-labelledby="svc-ai-title">
+            <div class="svc-top">
+              <div class="svc-id">
+                <span class="svc-ico" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4 4v-4h.5A2.5 2.5 0 0 1 4 13.5z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/></svg></span>
+                <span class="svc-caption">Telegram · ВК · сайт</span>
+              </div>
+              <span class="svc-badge">Хит</span>
             </div>
-            <h3>ИИ-администратор</h3>
-            <p class="service-desc">Отвечает клиентам в Telegram, ВК и на сайте, знает ваши цены и услуги, записывает и передаёт заявку человеку.</p>
-            <ul class="checks">
-              <li>Отвечает 24/7 по вашей базе знаний</li>
-              <li>Передаёт сложные вопросы живому сотруднику</li>
-              <li>Заявки сразу приходят вам в Telegram</li>
+            <h3 class="svc-title" id="svc-ai-title">ИИ-<br>администратор</h3>
+            <p class="svc-desc">Отвечает клиентам в Telegram, ВК и на сайте, знает ваши цены и услуги, записывает и передаёт заявку человеку.</p>
+            <ul class="svc-chips">
+              <li class="svc-sticker">+ Каналы</li>
+              <li class="svc-chip">Telegram</li>
+              <li class="svc-chip">ВКонтакте</li>
+              <li class="svc-chip">Сайт</li>
             </ul>
-            <div class="service-meta">
-              <p class="price">от <span data-price="aiAdmin">30 000 ₽</span></p>
-              <p class="term">7–10 дней · + поддержка от <span data-price="support">3 000 ₽</span>/мес</p>
+            <ul class="svc-list">
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Отвечает 24/7 по вашей базе знаний</span></li>
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Передаёт сложные вопросы живому сотруднику</span></li>
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Заявки сразу приходят вам в Telegram</span></li>
+            </ul>
+            <div class="svc-bottom">
+              <div class="svc-price-row">
+                <p class="svc-price">от <span data-price="aiAdmin">30 000 ₽</span></p>
+                <p class="svc-term">7–10<br>дней</p>
+              </div>
+              <p class="svc-support">+ поддержка от <span data-price="support">3 000 ₽</span>/мес</p>
+              <a class="svc-btn" href="#contact" data-pick="ai-admin">Обсудить <span class="svc-arrow" aria-hidden="true">→</span></a>
             </div>
-            <a class="btn btn--dark" href="#contact" data-pick="ai-admin">Обсудить <span class="btn-arrow" aria-hidden="true">→</span></a>
           </article>
 
-          <article class="card service reveal-up" style="--i:1">
-            <div class="service-top">
-              <span class="icon-box icon-box--blue"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3.5 9.5h17M8 3v4M16 3v4M8.5 14.5l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-              <span class="tag">Для сервисов</span>
+          <article class="svc-card svc-card--sky reveal-up" style="--i:1" aria-labelledby="svc-bot-title">
+            <div class="svc-top">
+              <div class="svc-id">
+                <span class="svc-ico" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3.5 9.5h17M8 3v4M16 3v4M8.5 14.5l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="svc-caption">Запись 24/7</span>
+              </div>
+              <span class="svc-badge">Для сервисов</span>
             </div>
-            <h3>Чат-бот для записи</h3>
-            <p class="service-desc">Запись на услуги без звонков и переписки вручную. Бот сам напоминает клиентам о визите.</p>
-            <ul class="checks">
-              <li>Показывает свободное время и записывает клиента</li>
-              <li>Отправляет клиентам напоминания о записи</li>
-              <li>Новые записи сразу видны вам</li>
+            <h3 class="svc-title" id="svc-bot-title">Чат-бот<br>для записи</h3>
+            <p class="svc-desc">Запись на услуги без звонков и переписки вручную. Бот сам напоминает клиентам о визите.</p>
+            <ul class="svc-chips">
+              <li class="svc-sticker">+ Функции</li>
+              <li class="svc-chip">Запись</li>
+              <li class="svc-chip">Напоминания</li>
+              <li class="svc-chip">Telegram</li>
             </ul>
-            <div class="service-meta">
-              <p class="price">от <span data-price="chatbot">20 000 ₽</span></p>
-              <p class="term">5–7 дней</p>
+            <ul class="svc-list">
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Показывает свободное время и записывает клиента</span></li>
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Отправляет клиентам напоминания о записи</span></li>
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Новые записи сразу видны вам</span></li>
+            </ul>
+            <div class="svc-bottom">
+              <div class="svc-price-row">
+                <p class="svc-price">от <span data-price="chatbot">20 000 ₽</span></p>
+                <p class="svc-term">5–7<br>дней</p>
+              </div>
+              <a class="svc-btn" href="#contact" data-pick="chatbot">Обсудить <span class="svc-arrow" aria-hidden="true">→</span></a>
             </div>
-            <a class="btn btn--dark" href="#contact" data-pick="chatbot">Обсудить <span class="btn-arrow" aria-hidden="true">→</span></a>
           </article>
 
-          <article class="card service reveal-up" style="--i:2">
-            <div class="service-top">
-              <span class="icon-box icon-box--teal"><svg width="24" height="24" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="18" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.5 6H14a3 3 0 0 1 3 3v6.5M15.5 13.5l1.5 2 1.5-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-              <span class="tag">Экономит время</span>
+          <article class="svc-card svc-card--green reveal-up" style="--i:2" aria-labelledby="svc-auto-title">
+            <div class="svc-top">
+              <div class="svc-id">
+                <span class="svc-ico" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="18" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.5 6H14a3 3 0 0 1 3 3v6.5M15.5 13.5l1.5 2 1.5-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="svc-caption">Заявки под контролем</span>
+              </div>
+              <span class="svc-badge">Экономит время</span>
             </div>
-            <h3>Автоматизация заявок</h3>
-            <p class="service-desc">Форма или мессенджер → таблица или CRM → уведомление ответственному. Ни одна заявка не теряется.</p>
-            <ul class="checks">
-              <li>Собирает заявки из всех каналов в одно место</li>
-              <li>Записывает их в таблицу или CRM</li>
-              <li>Сразу уведомляет ответственного</li>
+            <h3 class="svc-title" id="svc-auto-title">Автоматизация<br>заявок</h3>
+            <p class="svc-desc">Форма или мессенджер → таблица или CRM → уведомление ответственному. Ни одна заявка не теряется.</p>
+            <ul class="svc-chips">
+              <li class="svc-sticker">+ Интеграции</li>
+              <li class="svc-chip">Формы</li>
+              <li class="svc-chip">Таблицы</li>
+              <li class="svc-chip">CRM</li>
+              <li class="svc-chip">Telegram</li>
             </ul>
-            <div class="service-meta">
-              <p class="price">от <span data-price="automation">20 000 ₽</span></p>
-              <p class="term">3–5 дней</p>
+            <ul class="svc-list">
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Собирает заявки из всех каналов в одно место</span></li>
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Записывает их в таблицу или CRM</span></li>
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Сразу уведомляет ответственного</span></li>
+            </ul>
+            <div class="svc-bottom">
+              <div class="svc-price-row">
+                <p class="svc-price">от <span data-price="automation">20 000 ₽</span></p>
+                <p class="svc-term">3–5<br>дней</p>
+              </div>
+              <a class="svc-btn" href="#contact" data-pick="automation">Обсудить <span class="svc-arrow" aria-hidden="true">→</span></a>
             </div>
-            <a class="btn btn--dark" href="#contact" data-pick="automation">Обсудить <span class="btn-arrow" aria-hidden="true">→</span></a>
           </article>
 
-          <article class="card service reveal-up" style="--i:3">
-            <div class="service-top">
-              <span class="icon-box icon-box--coral"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3.5 9h17M7 6.8h.01M9.5 6.8h.01M7.5 13h5M7.5 16h3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>
-              <span class="tag">Быстрый старт</span>
+          <article class="svc-card svc-card--coral reveal-up" style="--i:3" aria-labelledby="svc-site-title">
+            <div class="svc-top">
+              <div class="svc-id">
+                <span class="svc-ico" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3.5 9h17M7 6.8h.01M9.5 6.8h.01M7.5 13h5M7.5 16h3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+                <span class="svc-caption">Запуск от 3 дней</span>
+              </div>
+              <span class="svc-badge">Быстрый старт</span>
             </div>
-            <h3>Сайт или лендинг</h3>
-            <p class="service-desc">Продающая страница с формой заявки и аналитикой. Понятно объясняет, что вы продаёте.</p>
-            <ul class="checks">
-              <li>Удобно смотреть с телефона</li>
-              <li>Заявки с формы приходят вам в Telegram</li>
-              <li>Подключаем аналитику и базовое SEO</li>
+            <h3 class="svc-title" id="svc-site-title">Сайт или<br>лендинг</h3>
+            <p class="svc-desc">Продающая страница с формой заявки и аналитикой. Понятно объясняет, что вы продаёте.</p>
+            <ul class="svc-chips">
+              <li class="svc-sticker">+ Внутри</li>
+              <li class="svc-chip">Лендинг</li>
+              <li class="svc-chip">Форма заявки</li>
+              <li class="svc-chip">Аналитика</li>
             </ul>
-            <div class="service-meta">
-              <p class="price">от <span data-price="website">15 000 ₽</span></p>
-              <p class="term">3–5 дней</p>
+            <ul class="svc-list">
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Удобно смотреть с телефона</span></li>
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Заявки с формы приходят вам в Telegram</span></li>
+              <li><svg class="svc-check" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Подключаем аналитику и базовое SEO</span></li>
+            </ul>
+            <div class="svc-bottom">
+              <div class="svc-price-row">
+                <p class="svc-price">от <span data-price="website">15 000 ₽</span></p>
+                <p class="svc-term">3–5<br>дней</p>
+              </div>
+              <a class="svc-btn" href="#contact" data-pick="website">Обсудить <span class="svc-arrow" aria-hidden="true">→</span></a>
             </div>
-            <a class="btn btn--dark" href="#contact" data-pick="website">Обсудить <span class="btn-arrow" aria-hidden="true">→</span></a>
           </article>
         </div>
       </div>
