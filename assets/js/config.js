@@ -35,6 +35,12 @@ window.AWERON_CONFIG = {
     automation: 20000,  // Автоматизация заявок
     website: 15000,     // Сайт или лендинг
     bundle: 55000,      // Комплекс: ИИ-администратор + сайт + автоматизация
-    support: 3000       // Поддержка, ₽/мес
+    support: 3000,      // Поддержка, ₽/мес
+
+    // «Похожий проект — от …» в секции «Работы»
+    caseVorontsov: 7999, // сайт vorontsov.lab
+    caseZerAlg: 7999,    // приложение + сайт ZernovAlg
+    caseLangVor: 7999,   // приложение LangVor
+    caseAweron: 7999     // лендинг Aweron
   }
 };

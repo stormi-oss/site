@@ -440,28 +440,91 @@
       </div>
     </section>
 
-    <!-- ============ КЕЙСЫ ============
-         Пока реальных кейсов нет, секцию можно скрыть одним классом:
-         добавьте "is-hidden" к <section id="cases">: class="section is-hidden".
-         Не публикуйте выдуманные результаты. -->
+    <!-- ============ РАБОТЫ ============
+         Реальные проекты. Превью — assets/img/cases/*-1200.webp и *-640.webp (16:10).
+         Цены — в assets/js/config.js → prices.case*. Не публикуйте выдуманные результаты. -->
     <section class="section" id="cases" aria-labelledby="cases-title">
       <div class="container">
         <div class="section-head reveal-up">
           <p class="pill-badge"><span class="dot"></span>Работы</p>
-          <h2 id="cases-title">Кейсы и демо-проекты</h2>
+          <h2 id="cases-title">Наши проекты</h2>
+          <p class="lead">Сайты и приложения, которые мы сделали. Похожий проект соберём под вашу задачу.</p>
         </div>
-        <div class="cases-grid">
-          <article class="card case reveal-up" style="--i:0">
-            <div class="case-preview case-preview--a" aria-hidden="true"><span>Превью</span></div>
-            <h3 class="placeholder">[ДОБАВИТЬ: реальный кейс — ниша, задача, что сделали, результат]</h3>
+        <div class="work-grid">
+          <article class="work-card reveal-up" style="--i:0" aria-labelledby="work-vorontsov-title">
+            <figure class="work-media">
+              <img src="assets/img/cases/vorontsov-1200.webp" srcset="assets/img/cases/vorontsov-640.webp 640w, assets/img/cases/vorontsov-1200.webp 1200w" sizes="(min-width: 1280px) 600px, (min-width: 768px) 50vw, 100vw" width="1200" height="750" loading="lazy" decoding="async" alt="Главная страница сайта vorontsov.lab в окне браузера">
+              <span class="work-type">Сайт</span>
+            </figure>
+            <div class="work-body">
+              <h3 class="work-title" id="work-vorontsov-title">vorontsov.lab</h3>
+              <p class="work-desc">Личный сайт-блог и портфолио: главная, статьи, проекты, загрузки, карта путешествий и хронология. Светлая и тёмная тема, удобно читать с телефона.</p>
+              <ul class="work-tags"><li>8 страниц</li><li>Блог и статьи</li><li>Тёмная тема</li></ul>
+              <div class="work-bottom">
+                <div class="work-price-box">
+                  <p class="work-price-label">Похожий проект</p>
+                  <p class="work-price">от <span data-price="caseVorontsov">7 999 ₽</span></p>
+                </div>
+                <a class="work-btn" href="#contact" data-pick="website">Хочу похожий <span class="work-arrow" aria-hidden="true">→</span></a>
+              </div>
+            </div>
           </article>
-          <article class="card case reveal-up" style="--i:1">
-            <div class="case-preview case-preview--b" aria-hidden="true"><span>Превью</span></div>
-            <h3 class="placeholder">[ДОБАВИТЬ: реальный кейс — ниша, задача, что сделали, результат]</h3>
+          <article class="work-card reveal-up" style="--i:1" aria-labelledby="work-zeralg-title">
+            <figure class="work-media">
+              <img src="assets/img/cases/zeralg-1200.webp" srcset="assets/img/cases/zeralg-640.webp 640w, assets/img/cases/zeralg-1200.webp 1200w" sizes="(min-width: 1280px) 600px, (min-width: 768px) 50vw, 100vw" width="1200" height="750" loading="lazy" decoding="async" alt="Окно приложения ZernovAlg с решённой задачей и пройденными тестами на фоне сайта приложения">
+              <span class="work-type">Приложение + сайт</span>
+            </figure>
+            <div class="work-body">
+              <h3 class="work-title" id="work-zeralg-title">ZernovAlg</h3>
+              <p class="work-desc">Программа для подготовки к экзаменам по алгоритмам: собирает билет, даёт писать решение на Python или C++ и сразу проверяет его встроенными тестами. Плюс сайт для скачивания.</p>
+              <ul class="work-tags"><li>Windows и macOS</li><li>Python · C++</li><li>Автопроверка решений</li></ul>
+              <p class="work-links"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Скачать: <a href="https://github.com/stormi-oss/ZerAlg/releases/latest/download/ZernovAlg-Windows.exe" target="_blank" rel="noopener">Windows</a> · <a href="https://github.com/stormi-oss/ZerAlg/releases/latest/download/ZernovAlg.dmg" target="_blank" rel="noopener">macOS</a></p>
+              <div class="work-bottom">
+                <div class="work-price-box">
+                  <p class="work-price-label">Похожий проект</p>
+                  <p class="work-price">от <span data-price="caseZerAlg">7 999 ₽</span></p>
+                </div>
+                <a class="work-btn" href="#contact" data-pick="consult">Хочу похожий <span class="work-arrow" aria-hidden="true">→</span></a>
+              </div>
+            </div>
           </article>
-          <article class="card case reveal-up" style="--i:2">
-            <div class="case-preview case-preview--c" aria-hidden="true"><span>Превью</span></div>
-            <h3 class="placeholder">[ДОБАВИТЬ: реальный кейс — ниша, задача, что сделали, результат]</h3>
+          <article class="work-card reveal-up" style="--i:2" aria-labelledby="work-langvor-title">
+            <figure class="work-media">
+              <img src="assets/img/cases/langvor-1200.webp" srcset="assets/img/cases/langvor-640.webp 640w, assets/img/cases/langvor-1200.webp 1200w" sizes="(min-width: 1280px) 600px, (min-width: 768px) 50vw, 100vw" width="1200" height="750" loading="lazy" decoding="async" alt="Обложка приложения LangVor: тренажёр перевода с русского на английский">
+              <span class="work-type">Приложение</span>
+            </figure>
+            <div class="work-body">
+              <h3 class="work-title" id="work-langvor-title">LangVor</h3>
+              <p class="work-desc">Тренажёр перевода с русского на английский: текст и ваш перевод в двух панелях, проверка орфографии и грамматики на лету, словарь с интервальным повторением.</p>
+              <ul class="work-tags"><li>Windows и macOS</li><li>Проверка на лету</li><li>Карточки слов</li></ul>
+              <p class="work-links"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Скачать: <a href="https://github.com/stormi-oss/LangVor/releases/latest/download/langvor-windows.zip" target="_blank" rel="noopener">Windows</a> · <a href="https://github.com/stormi-oss/LangVor/releases/latest/download/langvor-macos.zip" target="_blank" rel="noopener">macOS</a></p>
+              <div class="work-bottom">
+                <div class="work-price-box">
+                  <p class="work-price-label">Похожий проект</p>
+                  <p class="work-price">от <span data-price="caseLangVor">7 999 ₽</span></p>
+                </div>
+                <a class="work-btn" href="#contact" data-pick="consult">Хочу похожий <span class="work-arrow" aria-hidden="true">→</span></a>
+              </div>
+            </div>
+          </article>
+          <article class="work-card reveal-up" style="--i:3" aria-labelledby="work-aweron-title">
+            <figure class="work-media">
+              <img src="assets/img/cases/aweron-1200.webp" srcset="assets/img/cases/aweron-640.webp 640w, assets/img/cases/aweron-1200.webp 1200w" sizes="(min-width: 1280px) 600px, (min-width: 768px) 50vw, 100vw" width="1200" height="750" loading="lazy" decoding="async" alt="Первый экран лендинга Aweron в окне браузера">
+              <span class="work-type">Лендинг</span>
+              <span class="work-here">Вы на нём</span>
+            </figure>
+            <div class="work-body">
+              <h3 class="work-title" id="work-aweron-title">Aweron — этот сайт</h3>
+              <p class="work-desc">Продающая страница студии: демо ИИ-администратора, форма заявки с отправкой в Telegram через n8n, аналитика только после согласия на cookie.</p>
+              <ul class="work-tags"><li>Лендинг</li><li>Форма → Telegram</li><li>SEO и микроразметка</li></ul>
+              <div class="work-bottom">
+                <div class="work-price-box">
+                  <p class="work-price-label">Похожий проект</p>
+                  <p class="work-price">от <span data-price="caseAweron">7 999 ₽</span></p>
+                </div>
+                <a class="work-btn" href="#contact" data-pick="website">Хочу похожий <span class="work-arrow" aria-hidden="true">→</span></a>
+              </div>
+            </div>
           </article>
         </div>
       </div>
