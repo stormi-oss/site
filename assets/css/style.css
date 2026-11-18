@@ -508,45 +508,163 @@ body.menu-open .site-header { background: transparent; border-bottom-color: tran
 .chart-axis { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
 .chart figcaption { margin-top: 10px; font-size: 13px; color: rgba(255,255,255,.75); }
 
-/* Схема интеграции */
-.flow { display: flex; align-items: center; margin-top: auto; padding-top: 16px; flex-wrap: nowrap; }
+/* Схема интеграции
+   Один цикл 4 с: «Сайт» отправляет → точка со следом едет к «Aweron» → приём (кольцо + отклик)
+   → точка едет к «Telegram / CRM» → приём. Все этапы — в одном цикле, поэтому не разъезжаются.
+   Линии заходят под чипы (чипы выше по z-index и непрозрачные) — точка выезжает из-под чипа
+   и уходит под следующий, без обрезки свечения. Анимируются только transform и opacity. */
+.flow {
+  --flow-dur: 4s;
+  --flow-ease: cubic-bezier(.55, 0, .3, 1);
+  --flow-glow: 0, 194, 168;
+  display: flex; align-items: center; margin-top: auto; padding-top: 16px; flex-wrap: nowrap;
+}
 .flow-node {
+  position: relative; z-index: 2;
   flex: none; display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 14px; border-radius: 14px;
   background: var(--bg); border: 1px solid var(--line);
   font-weight: 700; font-size: 14px; white-space: nowrap;
 }
 .flow-node--brand { background: var(--brand); color: #fff; border-color: var(--brand); }
-.flow-link { position: relative; flex: 1 1 auto; min-width: 22px; height: 2px; margin-inline: 6px; background: rgba(14,17,22,.18); border-radius: 2px; overflow: visible; }
-.flow-runner {
-  position: absolute; inset: 0;
-  transform: translateX(-100%);
-  animation: flow-run 3s var(--ease) infinite;
+/* кольцо-вспышка вокруг чипа: появляется с зазором 4px и расходится */
+.flow-node::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 18px;
+  border: 1.5px solid rgba(var(--flow-glow), .55);
+  box-shadow: 0 0 22px 2px rgba(var(--flow-glow), .28), inset 0 0 10px rgba(var(--flow-glow), .18);
+  opacity: 0; pointer-events: none;
 }
-.flow-link--2 .flow-runner { animation-delay: 1.5s; }
+.flow > .flow-node:first-child::after { animation: flow-ring-send var(--flow-dur) linear infinite; }
+.flow-node--brand { animation: flow-pop-brand var(--flow-dur) linear infinite; }
+.flow-node--brand::after { animation: flow-ring-brand var(--flow-dur) linear infinite; }
+.flow > .flow-node:last-child { animation: flow-pop-last var(--flow-dur) linear infinite; }
+.flow > .flow-node:last-child::after { animation: flow-ring-last var(--flow-dur) linear infinite; }
+
+/* линия: пунктир-дорожка; концы уходят под чипы на 12px */
+.flow-link {
+  position: relative; z-index: 1;
+  flex: 1 1 auto; min-width: 40px; height: 2px; margin-inline: -12px;
+  background: linear-gradient(90deg, rgba(14,17,22,.22) 50%, transparent 0) 0 0 / 8px 2px repeat-x;
+}
+/* след: заполняет линию за точкой и гаснет */
+.flow-trail {
+  position: absolute; inset: 0; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(var(--flow-glow), 0) 0%, rgba(var(--flow-glow), .55) 70%, rgb(var(--flow-glow)) 100%);
+  transform: scaleX(0); transform-origin: left center; opacity: 0;
+}
+.flow-runner { position: absolute; inset: 0; transform: translateX(-100%); }
 .flow-runner i {
-  position: absolute; right: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%;
-  background: var(--brand-2); box-shadow: 0 0 0 4px rgba(0,194,168,.2), 0 0 14px 2px rgba(0,194,168,.8);
+  position: absolute; right: -6px; top: -5px; width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #E9FFFB 0 18%, rgb(var(--flow-glow)) 55%);
+  box-shadow: 0 0 0 4px rgba(var(--flow-glow), .18), 0 0 18px 4px rgba(var(--flow-glow), .55);
 }
-.flow-link { clip-path: inset(-10px 0 -10px 0); }
-/* На узких экранах схема вертикальная */
+.flow-link:not(.flow-link--2) .flow-trail { animation: flow-trail-1 var(--flow-dur) linear infinite; }
+.flow-link:not(.flow-link--2) .flow-runner { animation: flow-run-1 var(--flow-dur) linear infinite; }
+.flow-link--2 .flow-trail { animation: flow-trail-2 var(--flow-dur) linear infinite; }
+.flow-link--2 .flow-runner { animation: flow-run-2 var(--flow-dur) linear infinite; }
+
+/* участок 1: 4% → 38%, участок 2: 50% → 84% */
+@keyframes flow-run-1 {
+  0%, 4%   { transform: translateX(-100%); opacity: 1; animation-timing-function: var(--flow-ease); }
+  38%      { transform: translateX(0); opacity: 1; }
+  44%      { transform: translateX(0); opacity: 0; }
+  100%     { transform: translateX(-100%); opacity: 0; }
+}
+@keyframes flow-run-2 {
+  0%, 44%  { transform: translateX(-100%); opacity: 0; }
+  50%      { transform: translateX(-100%); opacity: 1; animation-timing-function: var(--flow-ease); }
+  84%      { transform: translateX(0); opacity: 1; }
+  90%      { transform: translateX(0); opacity: 0; }
+  100%     { transform: translateX(-100%); opacity: 0; }
+}
+@keyframes flow-trail-1 {
+  0%, 4%   { transform: scaleX(0); opacity: 1; animation-timing-function: var(--flow-ease); }
+  38%      { transform: scaleX(1); opacity: 1; animation-timing-function: ease-out; }
+  58%      { transform: scaleX(1); opacity: 0; }
+  100%     { transform: scaleX(0); opacity: 0; }
+}
+@keyframes flow-trail-2 {
+  0%, 50%  { transform: scaleX(0); opacity: 1; animation-timing-function: var(--flow-ease); }
+  84%      { transform: scaleX(1); opacity: 1; animation-timing-function: ease-out; }
+  99%      { transform: scaleX(1); opacity: 0; }
+  100%     { transform: scaleX(0); opacity: 0; }
+}
+/* кольца: отправка (0–14%), приём в Aweron (37–56%), приём в Telegram/CRM (83–100%) */
+@keyframes flow-ring-send {
+  0%       { opacity: 0; transform: scale(.94); animation-timing-function: ease-out; }
+  4%       { opacity: .9; transform: scale(1); animation-timing-function: ease-in; }
+  16%      { opacity: 0; transform: scale(1.06); }
+  100%     { opacity: 0; transform: scale(1.06); }
+}
+@keyframes flow-ring-brand {
+  0%, 36%  { opacity: 0; transform: scale(.94); animation-timing-function: ease-out; }
+  40%      { opacity: 1; transform: scale(1); animation-timing-function: ease-in; }
+  56%      { opacity: 0; transform: scale(1.08); }
+  100%     { opacity: 0; transform: scale(1.08); }
+}
+@keyframes flow-ring-last {
+  0%, 82%  { opacity: 0; transform: scale(.94); animation-timing-function: ease-out; }
+  86%      { opacity: 1; transform: scale(1); animation-timing-function: ease-in; }
+  100%     { opacity: 0; transform: scale(1.08); }
+}
+/* отклик чипа при приёме */
+@keyframes flow-pop-brand {
+  0%, 37%  { transform: scale(1); animation-timing-function: cubic-bezier(.3, 1.6, .6, 1); }
+  42%      { transform: scale(1.06); animation-timing-function: ease-out; }
+  50%, 100% { transform: scale(1); }
+}
+@keyframes flow-pop-last {
+  0%, 83%  { transform: scale(1); animation-timing-function: cubic-bezier(.3, 1.6, .6, 1); }
+  88%      { transform: scale(1.05); animation-timing-function: ease-out; }
+  96%, 100% { transform: scale(1); }
+}
+
+/* На узких экранах схема вертикальная: та же логика по оси Y */
 @media (max-width: 559px) {
   .flow { flex-direction: column; align-items: flex-start; }
-  .flow-link { width: 2px; height: 26px; min-width: 0; flex: none; margin: 6px 0 6px 24px; clip-path: inset(0 -10px 0 -10px); }
-  .flow-runner { transform: translateY(-100%); animation-name: flow-run-v; }
-  .flow-runner i { right: -4px; top: auto; bottom: -5px; }
+  .flow-link {
+    width: 2px; height: 64px; min-width: 0; flex: none; margin: -12px 0 -12px 26px;
+    background: linear-gradient(180deg, rgba(14,17,22,.22) 50%, transparent 0) 0 0 / 2px 8px repeat-y;
+  }
+  .flow-trail { transform: scaleY(0); transform-origin: center top; background: linear-gradient(180deg, rgba(var(--flow-glow), 0) 0%, rgba(var(--flow-glow), .55) 70%, rgb(var(--flow-glow)) 100%); }
+  .flow-runner { transform: translateY(-100%); }
+  .flow-runner i { right: -5px; top: auto; bottom: -6px; }
+  .flow-link:not(.flow-link--2) .flow-trail { animation-name: flow-trail-1-v; }
+  .flow-link:not(.flow-link--2) .flow-runner { animation-name: flow-run-1-v; }
+  .flow-link--2 .flow-trail { animation-name: flow-trail-2-v; }
+  .flow-link--2 .flow-runner { animation-name: flow-run-2-v; }
 }
-@keyframes flow-run-v {
-  0% { transform: translateY(-100%); opacity: 0; }
-  8% { opacity: 1; }
-  50% { transform: translateY(0); opacity: 1; }
-  58%, 100% { transform: translateY(0); opacity: 0; }
+@keyframes flow-run-1-v {
+  0%, 4%   { transform: translateY(-100%); opacity: 1; animation-timing-function: var(--flow-ease); }
+  38%      { transform: translateY(0); opacity: 1; }
+  44%      { transform: translateY(0); opacity: 0; }
+  100%     { transform: translateY(-100%); opacity: 0; }
 }
-@keyframes flow-run {
-  0% { transform: translateX(-100%); opacity: 0; }
-  8% { opacity: 1; }
-  50% { transform: translateX(0); opacity: 1; }
-  58%, 100% { transform: translateX(0); opacity: 0; }
+@keyframes flow-run-2-v {
+  0%, 44%  { transform: translateY(-100%); opacity: 0; }
+  50%      { transform: translateY(-100%); opacity: 1; animation-timing-function: var(--flow-ease); }
+  84%      { transform: translateY(0); opacity: 1; }
+  90%      { transform: translateY(0); opacity: 0; }
+  100%     { transform: translateY(-100%); opacity: 0; }
+}
+@keyframes flow-trail-1-v {
+  0%, 4%   { transform: scaleY(0); opacity: 1; animation-timing-function: var(--flow-ease); }
+  38%      { transform: scaleY(1); opacity: 1; animation-timing-function: ease-out; }
+  58%      { transform: scaleY(1); opacity: 0; }
+  100%     { transform: scaleY(0); opacity: 0; }
+}
+@keyframes flow-trail-2-v {
+  0%, 50%  { transform: scaleY(0); opacity: 1; animation-timing-function: var(--flow-ease); }
+  84%      { transform: scaleY(1); opacity: 1; animation-timing-function: ease-out; }
+  99%      { transform: scaleY(1); opacity: 0; }
+  100%     { transform: scaleY(0); opacity: 0; }
+}
+
+/* Без анимации: статичная «заполненная» схема */
+@media (prefers-reduced-motion: reduce) {
+  .flow .flow-runner, .flow .flow-node::after { animation: none !important; opacity: 0; }
+  .flow .flow-node--brand, .flow > .flow-node:last-child { animation: none !important; transform: none; }
+  .flow .flow-trail { animation: none !important; opacity: .7; transform: none; }
 }
 
 /* ---------- Шаги ---------- */
