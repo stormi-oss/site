@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://aweron.ru/sitemap.xml

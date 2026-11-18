@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aweron — ИИ-администратор и автоматизация для бизнеса в Сочи</title>
+  <meta name="description" content="ИИ-администратор отвечает клиентам 24/7, записывает их и передаёт заявки в Telegram. Чат-боты, автоматизация заявок и сайты для бизнеса. Сочи и вся Россия.">
+  <link rel="canonical" href="https://aweron.ru/">
+  <meta name="theme-color" content="#F4F3EF">
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:site_name" content="Aweron">
+  <meta property="og:title" content="Aweron — ИИ-администратор и автоматизация для бизнеса">
+  <meta property="og:description" content="Отвечает клиентам за секунды 24/7, записывает их и передаёт вам готовые заявки. Плюс сайты и автоматизация под вашу задачу.">
+  <meta property="og:url" content="https://aweron.ru/">
+  <meta property="og:image" content="https://aweron.ru/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Aweron — ИИ-администратор и автоматизация для бизнеса">
+  <meta name="twitter:description" content="Отвечает клиентам за секунды 24/7, записывает их и передаёт вам готовые заявки.">
+  <meta name="twitter:image" content="https://aweron.ru/og-image.png">
+
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@600;700&display=swap">
+  <link rel="stylesheet" href="assets/css/style.css">
+
+  <script src="assets/js/config.js" defer></script>
+  <script src="assets/js/main.js" defer></script>
+  <noscript><style>.reveal-up{opacity:1!important;transform:none!important}.stack-card{opacity:1!important}</style></noscript>
+</head>
+<body>
+  <a class="skip-link" href="#main">Перейти к содержимому</a>
+
+  <!-- ============ ШАПКА ============ -->
+  <header class="site-header" id="top">
+    <div class="container header-inner">
+      <a class="logo" href="#top" aria-label="Aweron — на главную">
+        <svg class="logo-mark" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+          <defs>
+            <linearGradient id="lg-logo" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#1F4BFF"/><stop offset="1" stop-color="#00C2A8"/>
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="10" fill="url(#lg-logo)"/>
+          <path d="M9 23 L16 8.5 L23 23" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M11.2 18.2 Q16 14.6 20.8 18.2" fill="none" stroke="#C8F169" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-word">Aweron</span>
+      </a>
+
+      <nav class="main-nav" aria-label="Основная навигация">
+        <ul>
+          <li><a href="#services">Услуги</a></li>
+          <li><a href="#demo">Демо</a></li>
+          <li><a href="#process">Как работаем</a></li>
+          <li><a href="#pricing">Цены</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a class="btn btn--ghost btn--sm" href="https://t.me/" data-tg target="_blank" rel="noopener">Написать в Telegram</a>
+        <a class="btn btn--dark btn--sm" href="#contact">Оставить заявку <span class="btn-arrow" aria-hidden="true">→</span></a>
+      </div>
+
+      <button class="burger" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="mobile-menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Мобильное меню (вне header, чтобы backdrop-filter шапки не ломал position: fixed) -->
+  <div class="mobile-menu" id="mobile-menu" aria-label="Меню" role="dialog" aria-modal="true">
+    <nav aria-label="Мобильная навигация">
+      <ul>
+        <li><a href="#services">Услуги</a></li>
+        <li><a href="#demo">Демо</a></li>
+        <li><a href="#process">Как работаем</a></li>
+        <li><a href="#pricing">Цены</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </nav>
+    <div class="mobile-menu-actions">
+      <a class="btn btn--dark" href="#contact">Оставить заявку <span class="btn-arrow" aria-hidden="true">→</span></a>
+      <a class="btn btn--ghost" href="https://t.me/" data-tg target="_blank" rel="noopener">Написать в Telegram</a>
+    </div>
+  </div>
+
+  <main id="main">
+    <!-- ============ HERO ============ -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="container">
+        <div class="hero-box">
+          <div class="hero-aurora" aria-hidden="true"></div>
+          <div class="hero-grid">
+            <div class="hero-text">
+              <p class="pill-badge pill-badge--light"><span class="dot dot--live"></span>ИИ-администраторы для малого бизнеса</p>
+              <h1 id="hero-title" class="hero-title">
+                Ваш бизнес теряет заявки,
+                <span class="sr-only">пока вы спите, в выходные или когда администратор занят?</span>
+                <span class="rotator" aria-hidden="true"><span class="rotator-word active">пока вы спите?</span><span class="rotator-word">в выходные?</span><span class="rotator-word">в высокий сезон?</span><span class="rotator-word">когда админ занят?</span></span>
+              </h1>
+              <p class="hero-sub">Aweron ставит ИИ-администратора, который отвечает клиентам за секунды 24/7, записывает их и передаёт вам готовые заявки. Плюс сайты и автоматизация под вашу задачу.</p>
+              <div class="hero-cta">
+                <a class="btn btn--dark btn--lg" href="#contact">Обсудить задачу <span class="btn-arrow" aria-hidden="true">→</span></a>
+                <a class="btn btn--ghost btn--lg" href="#demo">Посмотреть демо</a>
+              </div>
+              <p class="hero-note">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Бесплатная консультация 15 минут · Фиксированная цена до старта
+              </p>
+            </div>
+
+            <div class="hero-visual" aria-hidden="true">
+              <div class="stack">
+                <div class="stack-card stack-card--ink" style="--x:-2%;--y:0%;--r:-6deg;--d:0ms">
+                  <div class="stack-card-top">
+                    <span class="stack-ico">
+                      <svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4 4v-4h0.5A2.5 2.5 0 0 1 4 13.5z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8.5 10h7M8.5 12.8h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+                    </span>
+                    <span class="status-online"><span class="dot dot--teal"></span>online</span>
+                  </div>
+                  <p class="stack-title">ИИ-администратор</p>
+                  <p class="stack-line">отвечает 24/7</p>
+                </div>
+                <div class="stack-card stack-card--coral" style="--x:30%;--y:35%;--r:3deg;--d:120ms">
+                  <div class="stack-card-top">
+                    <span class="stack-ico">
+                      <svg width="22" height="22" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3.5 9h17M7 6.8h.01M9.5 6.8h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+                    </span>
+                  </div>
+                  <p class="stack-title">Сайты и лендинги</p>
+                  <p class="stack-line">запуск от 3 дней</p>
+                </div>
+                <div class="stack-card stack-card--blue" style="--x:6%;--y:65%;--r:-2deg;--d:240ms">
+                  <div class="stack-card-top">
+                    <span class="stack-ico">
+                      <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="18" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.5 6H14a3 3 0 0 1 3 3v6.5M15.5 13.5l1.5 2 1.5-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </div>
+                  <p class="stack-title">Автоматизация заявок</p>
+                  <p class="stack-line">форма → CRM → Telegram</p>
+                </div>
+              </div>
+              <span class="float-pill float-pill--a"><span class="dot dot--lime"></span>ответ за 10 сек</span>
+              <span class="float-pill float-pill--b"><span class="dot dot--teal"></span>без выходных</span>
+            </div>
+          </div>
+        </div>
+
+        <ul class="perks">
+          <li class="perk reveal-up" style="--i:0">
+            <span class="perk-ico"><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.3 12.3l2.6 2.6 4.9-5.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span><strong>Понятный результат</strong><br>Заранее показываем, что получите на выходе</span>
+          </li>
+          <li class="perk reveal-up" style="--i:1">
+            <span class="perk-ico"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg></span>
+            <span><strong>Быстрый запуск</strong><br>Первые решения работают через 3–10 дней</span>
+          </li>
+          <li class="perk reveal-up" style="--i:2">
+            <span class="perk-ico"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M3.5 12.2V5.5a2 2 0 0 1 2-2h6.7l8.3 8.3-8.7 8.7z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="8.3" cy="8.3" r="1.5" fill="currentColor"/></svg></span>
+            <span><strong>Фиксированная цена</strong><br>Называем стоимость и срок до начала работ</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ БЕГУЩАЯ СТРОКА ============ -->
+    <div class="marquee" role="region" aria-label="С какими нишами работаем">
+      <div class="marquee-track">
+        <ul class="marquee-list">
+          <li>Гостевые дома</li><li>Мини-отели</li><li>Салоны красоты</li><li>Стоматологии</li><li>Рестораны</li><li>Турагентства</li><li>Автосервисы</li><li>Онлайн-школы</li><li>Клиники</li><li>Фитнес-студии</li>
+        </ul>
+        <ul class="marquee-list" aria-hidden="true">
+          <li>Гостевые дома</li><li>Мини-отели</li><li>Салоны красоты</li><li>Стоматологии</li><li>Рестораны</li><li>Турагентства</li><li>Автосервисы</li><li>Онлайн-школы</li><li>Клиники</li><li>Фитнес-студии</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ============ УСЛУГИ ============ -->
+    <section class="section" id="services" aria-labelledby="services-title">
+      <div class="container">
+        <div class="section-head reveal-up">
+          <p class="pill-badge"><span class="dot"></span>Услуги</p>
+          <h2 id="services-title">Что мы делаем для вашего бизнеса</h2>
+        </div>
+
+        <div class="services-grid">
+          <article class="card service reveal-up" style="--i:0">
+            <div class="service-top">
+              <span class="icon-box icon-box--ink"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4 4v-4h.5A2.5 2.5 0 0 1 4 13.5z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/></svg></span>
+              <span class="tag tag--lime">Хит</span>
+            </div>
+            <h3>ИИ-администратор</h3>
+            <p class="service-desc">Отвечает клиентам в Telegram, ВК и на сайте, знает ваши цены и услуги, записывает и передаёт заявку человеку.</p>
+            <ul class="checks">
+              <li>Отвечает 24/7 по вашей базе знаний</li>
+              <li>Передаёт сложные вопросы живому сотруднику</li>
+              <li>Заявки сразу приходят вам в Telegram</li>
+            </ul>
+            <div class="service-meta">
+              <p class="price">от <span data-price="aiAdmin">30 000 ₽</span></p>
+              <p class="term">7–10 дней · + поддержка от <span data-price="support">3 000 ₽</span>/мес</p>
+            </div>
+            <a class="btn btn--dark" href="#contact" data-pick="ai-admin">Обсудить <span class="btn-arrow" aria-hidden="true">→</span></a>
+          </article>
+
+          <article class="card service reveal-up" style="--i:1">
+            <div class="service-top">
+              <span class="icon-box icon-box--blue"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3.5 9.5h17M8 3v4M16 3v4M8.5 14.5l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="tag">Для сервисов</span>
+            </div>
+            <h3>Чат-бот для записи</h3>
+            <p class="service-desc">Запись на услуги без звонков и переписки вручную. Бот сам напоминает клиентам о визите.</p>
+            <ul class="checks">
+              <li>Показывает свободное время и записывает клиента</li>
+              <li>Отправляет клиентам напоминания о записи</li>
+              <li>Новые записи сразу видны вам</li>
+            </ul>
+            <div class="service-meta">
+              <p class="price">от <span data-price="chatbot">20 000 ₽</span></p>
+              <p class="term">5–7 дней</p>
+            </div>
+            <a class="btn btn--dark" href="#contact" data-pick="chatbot">Обсудить <span class="btn-arrow" aria-hidden="true">→</span></a>
+          </article>
+
+          <article class="card service reveal-up" style="--i:2">
+            <div class="service-top">
+              <span class="icon-box icon-box--teal"><svg width="24" height="24" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="18" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.5 6H14a3 3 0 0 1 3 3v6.5M15.5 13.5l1.5 2 1.5-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="tag">Экономит время</span>
+            </div>
+            <h3>Автоматизация заявок</h3>
+            <p class="service-desc">Форма или мессенджер → таблица или CRM → уведомление ответственному. Ни одна заявка не теряется.</p>
+            <ul class="checks">
+              <li>Собирает заявки из всех каналов в одно место</li>
+              <li>Записывает их в таблицу или CRM</li>
+              <li>Сразу уведомляет ответственного</li>
+            </ul>
+            <div class="service-meta">
+              <p class="price">от <span data-price="automation">20 000 ₽</span></p>
+              <p class="term">3–5 дней</p>
+            </div>
+            <a class="btn btn--dark" href="#contact" data-pick="automation">Обсудить <span class="btn-arrow" aria-hidden="true">→</span></a>
+          </article>
+
+          <article class="card service reveal-up" style="--i:3">
+            <div class="service-top">
+              <span class="icon-box icon-box--coral"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3.5 9h17M7 6.8h.01M9.5 6.8h.01M7.5 13h5M7.5 16h3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+              <span class="tag">Быстрый старт</span>
+            </div>
+            <h3>Сайт или лендинг</h3>
+            <p class="service-desc">Продающая страница с формой заявки и аналитикой. Понятно объясняет, что вы продаёте.</p>
+            <ul class="checks">
+              <li>Удобно смотреть с телефона</li>
+              <li>Заявки с формы приходят вам в Telegram</li>
+              <li>Подключаем аналитику и базовое SEO</li>
+            </ul>
+            <div class="service-meta">
+              <p class="price">от <span data-price="website">15 000 ₽</span></p>
+              <p class="term">3–5 дней</p>
+            </div>
+            <a class="btn btn--dark" href="#contact" data-pick="website">Обсудить <span class="btn-arrow" aria-hidden="true">→</span></a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ДЕМО ============ -->
+    <section class="section section--tint" id="demo" aria-labelledby="demo-title">
+      <div class="container demo-grid">
+        <div class="demo-text reveal-up">
+          <p class="pill-badge"><span class="dot dot--live"></span>Демо</p>
+          <h2 id="demo-title">Так ИИ-администратор отвечает вашим клиентам</h2>
+          <p class="lead">Бот знает ваши цены, свободные даты и правила. Он вежлив, отвечает по делу и не придумывает того, чего нет в базе знаний.</p>
+          <ul class="checks checks--lg">
+            <li>Называет точную цену и считает итог за клиента</li>
+            <li>Собирает имя и телефон, чтобы оформить заявку</li>
+            <li>Если не уверен в ответе — зовёт человека</li>
+            <li>Готовая заявка сразу уходит вам в Telegram</li>
+          </ul>
+          <a class="btn btn--dark" href="#contact">Хочу такого бота <span class="btn-arrow" aria-hidden="true">→</span></a>
+        </div>
+
+        <div class="demo-visual reveal-up" style="--i:1">
+          <div class="chat" id="demo-chat">
+            <div class="chat-head">
+              <span class="chat-avatar" aria-hidden="true">ГД</span>
+              <div>
+                <p class="chat-name">Гостевой дом у моря (демо)</p>
+                <p class="chat-status"><span class="dot dot--teal"></span>ИИ-администратор · online</p>
+              </div>
+              <button class="chat-replay" type="button" aria-label="Повторить демонстрацию">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4.5v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Повторить</span>
+              </button>
+            </div>
+            <ol class="chat-body" aria-label="Пример переписки">
+              <li class="msg msg--user"><p class="bubble">Здравствуйте! Есть свободный номер на двоих с 12 по 15 июля?</p></li>
+              <li class="msg msg--bot">
+                <span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>
+                <p class="bubble">Здравствуйте! Да, на эти даты свободен двухместный номер с балконом — 4 500 ₽ за ночь, итого 13 500 ₽ за 3 ночи. Завтрак включён. Забронировать?</p>
+              </li>
+              <li class="msg msg--user"><p class="bubble">Да. А до моря далеко?</p></li>
+              <li class="msg msg--bot">
+                <span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>
+                <p class="bubble">8 минут пешком 🙂 Напишите, пожалуйста, имя и телефон — администратор подтвердит бронь в течение 15 минут.</p>
+              </li>
+              <li class="msg msg--system"><p class="bubble">✓ Заявка передана администратору в Telegram</p></li>
+            </ol>
+          </div>
+          <p class="caption">Демонстрационный сценарий</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ БЕНТО ============ -->
+    <section class="section" id="benefits" aria-labelledby="benefits-title">
+      <div class="container">
+        <div class="section-head reveal-up">
+          <p class="pill-badge"><span class="dot"></span>Почему Aweron</p>
+          <h2 id="benefits-title">Работает, пока вы занимаетесь бизнесом</h2>
+        </div>
+
+        <div class="bento">
+          <article class="card bento-card bento-card--chart reveal-up" style="--i:0">
+            <h3>Заявки не теряются ночью и в выходные</h3>
+            <p>Клиенты пишут, когда им удобно, — часто вечером и ночью. ИИ-администратор отвечает в любое время.</p>
+            <figure class="chart">
+              <div class="bars" aria-hidden="true">
+                <i style="--h:18;--d:0"></i><i style="--h:14;--d:1"></i><i style="--h:12;--d:2"></i><i style="--h:10;--d:3"></i><i style="--h:10;--d:4"></i><i style="--h:12;--d:5"></i><i style="--h:22;--d:6"></i><i style="--h:40;--d:7"></i><i style="--h:62;--d:8"></i><i style="--h:78;--d:9"></i><i style="--h:84;--d:10"></i><i style="--h:80;--d:11"></i><i style="--h:72;--d:12"></i><i style="--h:76;--d:13"></i><i style="--h:82;--d:14"></i><i style="--h:88;--d:15"></i><i style="--h:94;--d:16"></i><i style="--h:104;--d:17"></i><i style="--h:116;--d:18"></i><i style="--h:124;--d:19"></i><i style="--h:120;--d:20"></i><i style="--h:100;--d:21"></i><i style="--h:70;--d:22"></i><i style="--h:40;--d:23"></i>
+              </div>
+              <div class="chart-axis" aria-hidden="true"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+              <figcaption>Обращения по часам суток (пример)</figcaption>
+            </figure>
+          </article>
+
+          <article class="card bento-card bento-card--lime reveal-up" style="--i:1">
+            <span class="bento-ico bento-ico--bolt"><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg></span>
+            <h3>Запуск от 3 дней</h3>
+            <p>Не нужно месяцами ждать разработку. Сайт и автоматизацию запускаем за 3–5 дней, ИИ-администратора — за 7–10.</p>
+          </article>
+
+          <article class="card bento-card reveal-up" style="--i:2">
+            <span class="bento-ico"><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12.2V5.5a2 2 0 0 1 2-2h6.7l8.3 8.3-8.7 8.7z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="8.3" cy="8.3" r="1.5" fill="currentColor"/></svg></span>
+            <h3>Понятная цена</h3>
+            <p>Фиксированная стоимость внедрения до старта работ. Без почасовой оплаты и сюрпризов в конце.</p>
+          </article>
+
+          <article class="card bento-card bento-card--flow reveal-up" style="--i:3">
+            <h3>Встраивается в то, чем вы уже пользуетесь</h3>
+            <div class="flow" aria-label="Схема: заявка с сайта проходит через Aweron и приходит в Telegram или CRM">
+              <span class="flow-node"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Сайт</span>
+              <span class="flow-link" aria-hidden="true"><span class="flow-runner"><i></i></span></span>
+              <span class="flow-node flow-node--brand"><svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M9 23 L16 8.5 L23 23" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.2 18.2 Q16 14.6 20.8 18.2" fill="none" stroke="#C8F169" stroke-width="2.8" stroke-linecap="round"/></svg>Aweron</span>
+              <span class="flow-link flow-link--2" aria-hidden="true"><span class="flow-runner"><i></i></span></span>
+              <span class="flow-node"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 4L3.5 11l6 2.2M20.5 4l-3 15.5-8-6.3M20.5 4L9.5 13.2v5.3l3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Telegram / CRM</span>
+            </div>
+          </article>
+
+          <article class="card bento-card bento-card--ink reveal-up" style="--i:4">
+            <span class="bento-ico"><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5 20c.8-3.6 3.6-5.6 7-5.6s6.2 2 7 5.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+            <h3>Человек всегда в контроле</h3>
+            <p>Бот передаёт сложные и важные вопросы сотруднику. Оплаты, отмены и спорные ситуации подтверждает человек.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ КАК РАБОТАЕМ ============ -->
+    <section class="section section--tint" id="process" aria-labelledby="process-title">
+      <div class="container">
+        <div class="section-head reveal-up">
+          <p class="pill-badge"><span class="dot"></span>4 шага</p>
+          <h2 id="process-title">От заявки до запуска</h2>
+        </div>
+        <ol class="steps js-observe">
+          <li class="step reveal-up" style="--i:0">
+            <span class="step-num">01</span>
+            <h3>Заявка</h3>
+            <p>Оставляете контакт — отвечаем в течение рабочего дня.</p>
+          </li>
+          <li class="step reveal-up" style="--i:1">
+            <span class="step-num">02</span>
+            <h3>Созвон 15 минут</h3>
+            <p>Разбираем задачу, называем фиксированную цену и срок.</p>
+          </li>
+          <li class="step reveal-up" style="--i:2">
+            <span class="step-num">03</span>
+            <h3>Демо и доработка</h3>
+            <p>Показываем рабочую версию, вносим правки. Предоплата 50%.</p>
+          </li>
+          <li class="step reveal-up" style="--i:3">
+            <span class="step-num">04</span>
+            <h3>Запуск и поддержка</h3>
+            <p>Подключаем, обучаем. Остаток оплаты — после сдачи.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ КЕЙСЫ ============
+         Пока реальных кейсов нет, секцию можно скрыть одним классом:
+         добавьте "is-hidden" к <section id="cases">: class="section is-hidden".
+         Не публикуйте выдуманные результаты. -->
+    <section class="section" id="cases" aria-labelledby="cases-title">
+      <div class="container">
+        <div class="section-head reveal-up">
+          <p class="pill-badge"><span class="dot"></span>Работы</p>
+          <h2 id="cases-title">Кейсы и демо-проекты</h2>
+        </div>
+        <div class="cases-grid">
+          <article class="card case reveal-up" style="--i:0">
+            <div class="case-preview case-preview--a" aria-hidden="true"><span>Превью</span></div>
+            <h3 class="placeholder">[ДОБАВИТЬ: реальный кейс — ниша, задача, что сделали, результат]</h3>
+          </article>
+          <article class="card case reveal-up" style="--i:1">
+            <div class="case-preview case-preview--b" aria-hidden="true"><span>Превью</span></div>
+            <h3 class="placeholder">[ДОБАВИТЬ: реальный кейс — ниша, задача, что сделали, результат]</h3>
+          </article>
+          <article class="card case reveal-up" style="--i:2">
+            <div class="case-preview case-preview--c" aria-hidden="true"><span>Превью</span></div>
+            <h3 class="placeholder">[ДОБАВИТЬ: реальный кейс — ниша, задача, что сделали, результат]</h3>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ЦЕНЫ ============ -->
+    <section class="section" id="pricing" aria-labelledby="pricing-title">
+      <div class="container">
+        <div class="bundle reveal-up">
+          <div class="bundle-glow" aria-hidden="true"></div>
+          <div class="bundle-main">
+            <p class="pill-badge pill-badge--dark"><span class="dot dot--lime"></span>Цены</p>
+            <h2 id="pricing-title">Комплекс со скидкой</h2>
+            <p class="bundle-sub">ИИ-администратор + сайт + автоматизация заявок</p>
+            <ul class="bundle-list">
+              <li><span>ИИ-администратор с базой знаний о вашем бизнесе</span><em>включено</em></li>
+              <li><span>Сайт или лендинг с формой заявки</span><em>включено</em></li>
+              <li><span>Автоматизация: форма → таблица или CRM → Telegram</span><em>включено</em></li>
+              <li><span>Подключение аналитики</span><em>включено</em></li>
+              <li><span>Обучение ваших сотрудников</span><em>включено</em></li>
+            </ul>
+          </div>
+          <div class="bundle-side">
+            <p class="bundle-old">по отдельности <s data-price-sum="aiAdmin,website,automation">65 000 ₽</s></p>
+            <p class="bundle-price">от <span data-price="bundle">55 000 ₽</span></p>
+            <a class="btn btn--lime btn--lg" href="#contact" data-pick="bundle">Обсудить комплекс <span class="btn-arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
+        <p class="bundle-note">Поддержка — от <span data-price="support">3 000 ₽</span>/мес. Расходы на работу ИИ-модели зависят от числа диалогов: обсуждаем их отдельно и называем заранее.</p>
+      </div>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section class="section section--tint" id="faq" aria-labelledby="faq-title">
+      <div class="container faq-grid">
+        <div class="faq-aside reveal-up">
+          <p class="pill-badge"><span class="dot"></span>FAQ</p>
+          <h2 id="faq-title">Вопросы и ответы</h2>
+          <p class="lead">Не нашли ответ? Напишите — ответим коротко и по делу.</p>
+          <a class="btn btn--dark" href="https://t.me/" data-tg target="_blank" rel="noopener">Спросить в Telegram <span class="btn-arrow" aria-hidden="true">→</span></a>
+        </div>
+
+        <div class="faq-list reveal-up" style="--i:1">
+          <div class="faq-item">
+            <h3><button class="faq-q" type="button" id="faq-q1" aria-expanded="false" aria-controls="faq-a1">Сколько стоит и от чего зависит цена?<span class="faq-plus" aria-hidden="true"></span></button></h3>
+            <div class="faq-a" id="faq-a1" role="region" aria-labelledby="faq-q1"><div><p>Цена зависит от задачи: сколько каналов подключаем, насколько большая база знаний и нужна ли интеграция с вашей CRM. Ориентиры: сайт — от <span data-price="website">15 000 ₽</span>, автоматизация и чат-бот — от <span data-price="automation">20 000 ₽</span>, ИИ-администратор — от <span data-price="aiAdmin">30 000 ₽</span>. Точную фиксированную цену называем после 15-минутного созвона, до начала работ.</p></div></div>
+          </div>
+          <div class="faq-item">
+            <h3><button class="faq-q" type="button" id="faq-q2" aria-expanded="false" aria-controls="faq-a2">Сколько времени занимает запуск?<span class="faq-plus" aria-hidden="true"></span></button></h3>
+            <div class="faq-a" id="faq-a2" role="region" aria-labelledby="faq-q2"><div><p>Сайт и автоматизация заявок — 3–5 дней, чат-бот для записи — 5–7 дней, ИИ-администратор — 7–10 дней. Срок фиксируем вместе с ценой. Чаще всего он зависит от того, как быстро вы пришлёте материалы: цены, услуги, ответы на частые вопросы.</p></div></div>
+          </div>
+          <div class="faq-item">
+            <h3><button class="faq-q" type="button" id="faq-q3" aria-expanded="false" aria-controls="faq-a3">Что если ИИ ответит клиенту неправильно?<span class="faq-plus" aria-hidden="true"></span></button></h3>
+            <div class="faq-a" id="faq-a3" role="region" aria-labelledby="faq-q3"><div><p>ИИ отвечает только по вашей базе знаний: ценам, услугам, правилам. Мы задаём ограничения — о чём бот не говорит и когда обязан позвать человека. Если он не уверен, вопрос уходит вашему сотруднику. Перед запуском вместе проверяем бота на реальных вопросах ваших клиентов.</p></div></div>
+          </div>
+          <div class="faq-item">
+            <h3><button class="faq-q" type="button" id="faq-q4" aria-expanded="false" aria-controls="faq-a4">Нужно ли платить за ИИ каждый месяц?<span class="faq-plus" aria-hidden="true"></span></button></h3>
+            <div class="faq-a" id="faq-a4" role="region" aria-labelledby="faq-q4"><div><p>Да, есть два ежемесячных расхода. Поддержка — от <span data-price="support">3 000 ₽</span>/мес: правки базы знаний, контроль работы, обновления. И оплата работы ИИ-модели — она зависит от количества диалогов. Обе суммы называем заранее, до запуска.</p></div></div>
+          </div>
+          <div class="faq-item">
+            <h3><button class="faq-q" type="button" id="faq-q5" aria-expanded="false" aria-controls="faq-a5">Как вы работаете с персональными данными клиентов?<span class="faq-plus" aria-hidden="true"></span></button></h3>
+            <div class="faq-a" id="faq-a5" role="region" aria-labelledby="faq-q5"><div><p>Работаем по 152-ФЗ. На сайте и в боте собираем согласие на обработку данных и храним только то, что нужно для заявки: имя, контакт, суть запроса. Где хранить данные, согласуем с вами с учётом требований закона.</p></div></div>
+          </div>
+          <div class="faq-item">
+            <h3><button class="faq-q" type="button" id="faq-q6" aria-expanded="false" aria-controls="faq-a6">Можно ли подключить мою CRM, таблицу или мессенджер?<span class="faq-plus" aria-hidden="true"></span></button></h3>
+            <div class="faq-a" id="faq-a6" role="region" aria-labelledby="faq-q6"><div><p>Да, если сервис позволяет подключение, — у большинства популярных CRM, онлайн-таблиц и мессенджеров такая возможность есть. На созвоне скажем, подключается ли ваша система и сколько это стоит. Если напрямую нельзя, предложим обходной вариант.</p></div></div>
+          </div>
+          <div class="faq-item">
+            <h3><button class="faq-q" type="button" id="faq-q7" aria-expanded="false" aria-controls="faq-a7">Работаете ли вы не в Сочи?<span class="faq-plus" aria-hidden="true"></span></button></h3>
+            <div class="faq-a" id="faq-a7" role="region" aria-labelledby="faq-q7"><div><p>Да. Мы базируемся в Сочи, но работаем удалённо по всей России: созвон, демо и запуск проходят онлайн.</p></div></div>
+          </div>
+          <div class="faq-item">
+            <h3><button class="faq-q" type="button" id="faq-q8" aria-expanded="false" aria-controls="faq-a8">Как происходит оплата?<span class="faq-plus" aria-hidden="true"></span></button></h3>
+            <div class="faq-a" id="faq-a8" role="region" aria-labelledby="faq-q8"><div><p>Работаем как самозанятый, на каждую оплату выдаём чек. Предоплата 50% — после того как согласовали задачу, цену и срок. Остаток — после сдачи и запуска.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ФОРМА ============ -->
+    <section class="section" id="contact" aria-labelledby="contact-title">
+      <div class="container">
+        <div class="contact-box">
+          <div class="hero-aurora hero-aurora--soft" aria-hidden="true"></div>
+          <div class="contact-grid">
+            <div class="contact-intro reveal-up">
+              <p class="pill-badge pill-badge--light"><span class="dot dot--live"></span>Заявка</p>
+              <h2 id="contact-title">Расскажите о задаче — предложим решение и цену за 1 день</h2>
+              <p class="lead">Ответим в течение рабочего дня. Консультация бесплатная и ни к чему не обязывает.</p>
+              <div class="tg-alt">
+                <p>Или напишите сразу в Telegram</p>
+                <a class="btn btn--dark btn--lg" href="https://t.me/" data-tg target="_blank" rel="noopener">
+                  <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 4L3.5 11l6 2.2M20.5 4l-3 15.5-8-6.3M20.5 4L9.5 13.2v5.3l3-3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Написать в Telegram
+                </a>
+              </div>
+            </div>
+
+            <form class="lead-form reveal-up" style="--i:1" id="lead-form" novalidate>
+              <div class="field">
+                <label for="f-name">Имя <span class="req" aria-hidden="true">*</span></label>
+                <input id="f-name" name="name" type="text" autocomplete="name" required minlength="2" maxlength="60" aria-describedby="f-name-err">
+                <p class="field-error" id="f-name-err" aria-live="polite"></p>
+              </div>
+
+              <div class="field">
+                <label for="f-contact">Телефон или Telegram <span class="req" aria-hidden="true">*</span></label>
+                <input id="f-contact" name="contact" type="text" inputmode="text" autocomplete="tel" required maxlength="40" placeholder="+7 900 000-00-00 или @ник" aria-describedby="f-contact-hint f-contact-err">
+                <p class="field-hint" id="f-contact-hint">Номер в формате +7… или 8…, либо ник в Telegram через @</p>
+                <p class="field-error" id="f-contact-err" aria-live="polite"></p>
+              </div>
+
+              <div class="field">
+                <label for="f-niche">Ниша бизнеса</label>
+                <div class="select-wrap">
+                  <select id="f-niche" name="niche">
+                    <option value="">Выберите вариант</option>
+                    <option value="Гостевой дом / отель">Гостевой дом / отель</option>
+                    <option value="Салон">Салон</option>
+                    <option value="Клиника">Клиника</option>
+                    <option value="Ресторан">Ресторан</option>
+                    <option value="Турагентство">Турагентство</option>
+                    <option value="Другое">Другое</option>
+                  </select>
+                </div>
+              </div>
+
+              <fieldset class="field">
+                <legend>Что нужно</legend>
+                <div class="chips">
+                  <label class="chip"><input type="checkbox" name="services" value="ИИ-администратор" data-service="ai-admin"><span>ИИ-администратор</span></label>
+                  <label class="chip"><input type="checkbox" name="services" value="Чат-бот" data-service="chatbot"><span>Чат-бот</span></label>
+                  <label class="chip"><input type="checkbox" name="services" value="Автоматизация" data-service="automation"><span>Автоматизация</span></label>
+                  <label class="chip"><input type="checkbox" name="services" value="Сайт" data-service="website"><span>Сайт</span></label>
+                  <label class="chip"><input type="checkbox" name="services" value="Не знаю — нужна консультация" data-service="consult"><span>Не знаю — нужна консультация</span></label>
+                </div>
+              </fieldset>
+
+              <div class="field">
+                <label for="f-comment">Комментарий</label>
+                <textarea id="f-comment" name="comment" rows="3" maxlength="1000" placeholder="Например: гостевой дом на 12 номеров, теряем заявки ночью" aria-describedby="f-comment-count f-comment-err"></textarea>
+                <p class="field-hint field-count" id="f-comment-count">0 / 1000</p>
+                <p class="field-error" id="f-comment-err" aria-live="polite"></p>
+              </div>
+
+              <!-- Honeypot: люди это поле не видят, боты заполняют -->
+              <div class="hp" aria-hidden="true">
+                <label for="f-website">Ваш сайт</label>
+                <input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off">
+              </div>
+
+              <div class="field field--consent">
+                <label class="consent">
+                  <input id="f-consent" name="consent" type="checkbox" required aria-describedby="f-consent-err">
+                  <span>Согласен на <a href="privacy.html" target="_blank" rel="noopener">обработку персональных данных</a></span>
+                </label>
+                <p class="field-error" id="f-consent-err" aria-live="polite"></p>
+              </div>
+
+              <button class="btn btn--dark btn--lg btn--submit" type="submit">
+                <span class="btn-label">Отправить заявку</span>
+                <span class="spinner" aria-hidden="true"></span>
+                <span class="btn-arrow" aria-hidden="true">→</span>
+              </button>
+
+              <div class="form-status" role="status" aria-live="polite" hidden>
+                <svg class="status-check" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 14.5l3.8 3.8 7.4-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <p class="form-status-text"></p>
+                <a class="btn btn--dark btn--sm form-status-tg" href="https://t.me/" data-tg target="_blank" rel="noopener" hidden>Написать в Telegram</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ ФУТЕР ============ -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <a class="logo" href="#top" aria-label="Aweron — наверх">
+          <svg class="logo-mark" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+            <rect width="32" height="32" rx="10" fill="#1F4BFF"/>
+            <path d="M9 23 L16 8.5 L23 23" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11.2 18.2 Q16 14.6 20.8 18.2" fill="none" stroke="#C8F169" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+          <span class="logo-word">Aweron</span>
+        </a>
+        <p>ИИ-агенты и автоматизация для бизнеса</p>
+        <p class="footer-region">Сочи и Краснодарский край · удалённо по всей России</p>
+      </div>
+      <nav class="footer-col" aria-label="Услуги">
+        <p class="footer-title">Услуги</p>
+        <ul>
+          <li><a href="#services">ИИ-администратор</a></li>
+          <li><a href="#services">Чат-бот для записи</a></li>
+          <li><a href="#services">Автоматизация заявок</a></li>
+          <li><a href="#services">Сайты и лендинги</a></li>
+        </ul>
+      </nav>
+      <nav class="footer-col" aria-label="Компания">
+        <p class="footer-title">Компания</p>
+        <ul>
+          <li><a href="#demo">Демо</a></li>
+          <li><a href="#process">Как работаем</a></li>
+          <li><a href="#pricing">Цены</a></li>
+          <li><a href="#faq">Вопросы и ответы</a></li>
+        </ul>
+      </nav>
+      <div class="footer-col">
+        <p class="footer-title">Контакты</p>
+        <ul>
+          <li><a href="https://t.me/" data-tg data-contact="telegram" target="_blank" rel="noopener">Telegram</a></li>
+          <li><a href="#" data-contact="phone">[ДОБАВИТЬ: телефон]</a></li>
+          <li><a href="#" data-contact="email">[ДОБАВИТЬ: email]</a></li>
+          <li><a href="#" data-contact="vk" target="_blank" rel="noopener">ВКонтакте</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>© <span data-year>2026</span> Aweron · Самозанятый <span data-legal="name">[ФИО]</span>, ИНН <span data-legal="inn">[ИНН]</span> · <a href="privacy.html">Политика конфиденциальности</a></p>
+    </div>
+  </footer>
+
+  <!-- ============ COOKIE ============ -->
+  <div class="cookie" role="region" aria-label="Уведомление о cookie" hidden>
+    <p>Мы используем cookie для аналитики. Подробнее — в <a href="privacy.html">политике конфиденциальности</a>.</p>
+    <div class="cookie-actions">
+      <button class="btn btn--ghost btn--sm" type="button" data-cookie="necessary">Только необходимые</button>
+      <button class="btn btn--dark btn--sm" type="button" data-cookie="all">Принять</button>
+    </div>
+  </div>
+</body>
+</html>
