@@ -860,3 +860,20 @@ body.menu-open .site-header { background: transparent; border-bottom-color: tran
   .rotator-word:not(.active) { display: none; }
   .form-status.is-success .status-check circle, .form-status.is-success .status-check path { stroke-dashoffset: 0; animation: none; }
 }
+
+/* === Logo === */
+.logo .logo-svg { display: block; height: 32px; width: auto; flex: none; overflow: visible; }
+.logo .logo-spark, .logo .logo-ping { transform-box: fill-box; transform-origin: center; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .site-header .logo:hover .logo-spark, .site-header .logo:focus-visible .logo-spark { animation: logo-spark .45s var(--ease); }
+  .site-header .logo:hover .logo-ping, .site-header .logo:focus-visible .logo-ping { animation: logo-ping .5s var(--ease); }
+}
+@keyframes logo-spark {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+@keyframes logo-ping {
+  0% { opacity: .9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(2.6); }
+}

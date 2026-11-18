@@ -500,7 +500,7 @@
       "description": "Внедрение ИИ-администраторов, чат-ботов, автоматизации заявок и разработка сайтов для малого и среднего бизнеса.",
       "url": site + "/",
       "image": site + "/og-image.png",
-      "logo": site + "/favicon.svg",
+      "logo": site + "/assets/img/logo/logo-512.png",
       "areaServed": [
         { "@type": "City", "name": "Сочи" },
         { "@type": "AdministrativeArea", "name": "Краснодарский край" },
