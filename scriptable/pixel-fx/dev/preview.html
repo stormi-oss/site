@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Pixel FX preview</title>
+<style>
+ body{background:#ddd;font:13px system-ui;margin:16px}
+ #out{display:flex;flex-wrap:wrap;gap:10px} .row{display:flex;gap:14px;align-items:flex-start}
+ figure{margin:0} figcaption{font-size:11px;color:#333}
+ canvas{border-radius:22px;display:block;width:var(--w);}
+ .acc{background:#222;color:#fff;border-radius:14px;padding:8px 12px;font:600 14px ui-monospace,monospace;white-space:pre;min-width:150px}
+</style></head><body>
+<div id="out"></div>
+<script src="scriptable-mock.js"></script>
+<script>
+// Запуск: python3 -m http.server в папке pixel-fx, открыть /dev/preview.html?q=...
+(async () => {
+  const q = new URLSearchParams(location.search);
+  window.__MOCK_TODAY__ = new Date().toISOString().slice(0, 10);
+  window.__PIXELFX_TEST__ = {};
+  const code = await (await fetch('../pixel-fx.js')).text();
+  const AF = Object.getPrototypeOf(async function () {}).constructor;
+  await new AF(code)();
+  const X = window.__PIXELFX_TEST__.exports;
+  const data = await X.loadData();
+  if (q.get('offline')) { window.__MOCK_OFFLINE__ = true; Object.assign(data, await X.loadData(true)); }
+  const out = document.getElementById('out');
+  const fams = (q.get('fam') || 'small,medium,large').split(',');
+  const scenes = (q.get('scene') || 'sign').split(',');
+  const seasons = (q.get('season') || 'autumn').split(',');
+  const tods = (q.get('tod') || 'day').split(',');
+  const trends = (q.get('trend') || 'up').split(',');
+  const param = q.get('p') || 'BYN:RUB,USD:100';
+  for (const scene of scenes) for (const season of seasons) for (const tod of tods) for (const trend of trends) {
+    const row = document.createElement('div'); row.className = 'row'; out.appendChild(row);
+    for (const fam of fams) {
+      const cfg = X.resolveConfig(param.split(':').length < 4 ? param + ':'.repeat(3 - (param.split(':').length - 1)) + scene : param, null);
+      const fig = document.createElement('figure');
+      if (fam.startsWith('accessory')) {
+        const w = X.renderAccessory(fam, cfg, data);
+        const d = document.createElement('div'); d.className = 'acc'; d.textContent = w.items.map(i => i.text).join('\n'); fig.appendChild(d);
+      } else {
+        const w = X.renderImageWidget(fam, cfg, data, { season, tod, trend: trend === 'null' ? null : trend, dark: q.get('dark') === '1' });
+        const c = w.backgroundImage.canvas; c.style.setProperty('--w', (c.width / window.PREVIEW_SCALE) + 'px'); fig.appendChild(c);
+        fig.title = `ops=${w.backgroundImage.ops}`;
+      }
+      const cap = document.createElement('figcaption'); cap.textContent = `${fam} · ${scene} · ${season} · ${tod} · ${trend}`; fig.appendChild(cap);
+      row.appendChild(fig);
+    }
+  }
+  document.title = 'ready';
+})().catch(e => { document.body.textContent = 'ERROR: ' + e.stack; document.title = 'error'; });
+</script></body></html>
