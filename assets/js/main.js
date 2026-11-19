@@ -24,6 +24,23 @@
     try { fn(); } catch (err) { if (window.console) console.error("[Aweron] " + name + ":", err); }
   }
 
+  /* ---------- Флаги стран: если браузер не рисует эмодзи флагов (Chromium на Windows),
+     включаем свой шрифт Twemoji Country Flags (assets/fonts). Проверка — отрисовкой на canvas. */
+  safe("flags", function () {
+    function isColorEmoji(text) {
+      var c = document.createElement("canvas"); c.width = c.height = 1;
+      var x = c.getContext("2d", { willReadFrequently: true });
+      if (!x) return true;
+      x.textBaseline = "top";
+      x.font = '100px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      x.scale(0.01, 0.01);
+      function px(color) { x.clearRect(0, 0, 100, 100); x.fillStyle = color; x.fillText(text, 0, 0); return x.getImageData(0, 0, 1, 1).data.join(","); }
+      var a = px("#fff"), b = px("#000");
+      return a === b && b.indexOf("0,0,0,") !== 0; // цветной глиф не зависит от цвета текста
+    }
+    if (!isColorEmoji("\uD83C\uDDE8\uD83C\uDDED")) document.documentElement.classList.add("flag-polyfill");
+  });
+
   /* ---------- 0. Подстановка данных из конфига ---------- */
   function formatRub(n) { return Number(n).toLocaleString("ru-RU") + " ₽"; }
   function isFilled(v) { return typeof v === "string" && v.trim() !== "" && v.indexOf("[") === -1; }
@@ -74,6 +91,8 @@
       if (typeof v === "string" && v.trim()) el.textContent = v;
     });
     $all("[data-year]").forEach(function (el) { el.textContent = String(new Date().getFullYear()); });
+    var cv = /^(\d{4})-(\d{2})-(\d{2})$/.exec(legal.consentVersion || "");
+    if (cv) $all("[data-consent-version]").forEach(function (el) { el.textContent = cv[3] + "." + cv[2] + "." + cv[1]; });
   });
 
   /* ---------- 13. Шапка при прокрутке ---------- */
@@ -339,8 +358,7 @@
     var counter = $("#f-comment-count");
     var sending = false;
 
-    var PHONE_RE = /^(\+7|8)\d{10}$/;
-    var TG_RE = /^@[A-Za-z][A-Za-z0-9_]{3,31}$/;
+    var TG_RE = /^[A-Za-z][A-Za-z0-9_]{4,31}$/; // ник Telegram без @: 5–32 символа
 
     if (comment && counter) {
       comment.addEventListener("input", function () { counter.textContent = comment.value.length + " / 1000"; });
@@ -361,18 +379,287 @@
       else if (v.length > 60) msg = "Имя слишком длинное — максимум 60 символов.";
       return setError(el, "f-name-err", msg);
     }
-    function normalizeContact(v) {
-      v = v.trim();
-      if (v.charAt(0) === "@") return v;
-      return v.replace(/[\s\-()]/g, "");
+    /* ---------- Поле контакта: телефон с выбором страны или Telegram ---------- */
+    // ISO|название|код|маска (# — цифра). Без маски — свободная группировка, 6–12 цифр.
+    var COUNTRY_DATA = "RU|Россия|7|### ###-##-##;BY|Беларусь|375|## ###-##-##;KZ|Казахстан|7|### ###-##-##;UZ|Узбекистан|998|## ###-##-##;KG|Киргизия|996|### ###-###;TJ|Таджикистан|992|## ###-####;AM|Армения|374|## ###-###;AZ|Азербайджан|994|## ###-##-##;GE|Грузия|995|### ##-##-##;MD|Молдова|373|#### ####;TM|Туркменистан|993|## ##-##-##;UA|Украина|380|## ###-##-##;TR|Турция|90|### ### ## ##;AE|ОАЭ|971|## ### ####;AU|Австралия|61|### ### ###;AT|Австрия|43|;AL|Албания|355|;DZ|Алжир|213|;AO|Ангола|244|### ### ###;AD|Андорра|376|;AR|Аргентина|54|;AF|Афганистан|93|## ### ####;BD|Бангладеш|880|;BH|Бахрейн|973|#### ####;BE|Бельгия|32|### ## ## ##;BG|Болгария|359|;BO|Боливия|591|;BA|Босния и Герцеговина|387|;BR|Бразилия|55|(##) #####-####;GB|Великобритания|44|#### ######;HU|Венгрия|36|## ### ####;VE|Венесуэла|58|###-#######;VN|Вьетнам|84|;GH|Гана|233|;DE|Германия|49|;HK|Гонконг|852|#### ####;GR|Греция|30|### ### ####;DK|Дания|45|## ## ## ##;EG|Египет|20|### ### ####;IL|Израиль|972|## ###-####;IN|Индия|91|##### #####;ID|Индонезия|62|;JO|Иордания|962|# #### ####;IQ|Ирак|964|### ### ####;IR|Иран|98|### ### ####;IE|Ирландия|353|;IS|Исландия|354|### ####;ES|Испания|34|### ### ###;IT|Италия|39|;YE|Йемен|967|;KH|Камбоджа|855|;CM|Камерун|237|;CA|Канада|1|(###) ###-####;QA|Катар|974|#### ####;KE|Кения|254|### ######;CY|Кипр|357|## ######;CN|Китай|86|### #### ####;CO|Колумбия|57|### #######;CR|Коста-Рика|506|#### ####;CI|Кот-д’Ивуар|225|;CU|Куба|53|# ### ####;KW|Кувейт|965|#### ####;LA|Лаос|856|;LV|Латвия|371|## ### ###;LB|Ливан|961|;LY|Ливия|218|;LT|Литва|370|### #####;LI|Лихтенштейн|423|;LU|Люксембург|352|;MU|Маврикий|230|#### ####;MO|Макао|853|;MY|Малайзия|60|;MV|Мальдивы|960|###-####;MT|Мальта|356|#### ####;MA|Марокко|212|###-######;MX|Мексика|52|### ### ####;MC|Монако|377|;MN|Монголия|976|#### ####;MM|Мьянма|95|;NP|Непал|977|;NG|Нигерия|234|;NL|Нидерланды|31|# ########;NZ|Новая Зеландия|64|;NO|Норвегия|47|### ## ###;OM|Оман|968|#### ####;PK|Пакистан|92|### #######;PA|Панама|507|####-####;PY|Парагвай|595|;PE|Перу|51|### ### ###;PL|Польша|48|### ### ###;PT|Португалия|351|### ### ###;RO|Румыния|40|### ### ###;SV|Сальвадор|503|####-####;SM|Сан-Марино|378|;SA|Саудовская Аравия|966|## ### ####;MK|Северная Македония|389|;SC|Сейшелы|248|# ### ###;SN|Сенегал|221|;RS|Сербия|381|;SG|Сингапур|65|#### ####;SY|Сирия|963|### ### ###;SK|Словакия|421|### ### ###;SI|Словения|386|## ### ###;US|США|1|(###) ###-####;TW|Тайвань|886|;TH|Таиланд|66|## ### ####;TZ|Танзания|255|### ### ###;TN|Тунис|216|## ### ###;UG|Уганда|256|### ######;UY|Уругвай|598|;PH|Филиппины|63|### ### ####;FI|Финляндия|358|;FR|Франция|33|# ## ## ## ##;HR|Хорватия|385|;ME|Черногория|382|## ### ###;CZ|Чехия|420|### ### ###;CL|Чили|56|# #### ####;CH|Швейцария|41|## ### ## ##;SE|Швеция|46|## ### ## ##;LK|Шри-Ланка|94|## ### ####;EC|Эквадор|593|;EE|Эстония|372|;ET|Эфиопия|251|## ### ####;KR|Южная Корея|82|;ZA|ЮАР|27|## ### ####;JP|Япония|81|";
+    var POPULAR = ["RU", "BY", "KZ", "UZ", "KG", "TJ", "AM", "AZ", "GE", "MD", "TR", "AE"];
+    var countries = COUNTRY_DATA.split(";").map(function (row) {
+      var p = row.split("|"); return { iso: p[0], name: p[1], dial: p[2], mask: p[3] || "" };
+    });
+    var OTHER = { iso: "OTHER", name: "Другая страна", dial: "", mask: "" };
+    var byIso = { OTHER: OTHER };
+    countries.forEach(function (c) { byIso[c.iso] = c; });
+    var sorted = countries.slice().sort(function (a, b) { return a.name.localeCompare(b.name, "ru"); });
+    var byDialLength = countries.slice().sort(function (a, b) { return b.dial.length - a.dial.length; });
+
+    var contactBox = $(".field--contact", form);
+    var phonePane = $('[data-pane="phone"]', form), tgPane = $('[data-pane="telegram"]', form);
+    var phoneBox = $(".phone-box", form);
+    var phoneInput = $("#f-phone"), tgInput = $("#f-tg");
+    var ccBtn = $("#f-cc-btn"), ccPop = $("#f-cc-pop"), ccSearch = $("#f-cc-search"), ccList = $("#f-cc-list"), ccEmpty = $(".cc-empty", form);
+    var hint = $("#f-contact-hint");
+    var HINT = {
+      phone: "Выберите страну — код подставится сам, пробелы появятся при вводе.",
+      telegram: "Ник из профиля Telegram, без @ — например ivan_petrov. Можно вставить ссылку t.me/…"
+    };
+    var mode = "phone";
+    var country = byIso.RU;
+
+    function flagOf(iso) {
+      if (iso === "OTHER") return "\uD83C\uDF10"; // 🌐
+      return String.fromCodePoint(0x1F1E6 + iso.charCodeAt(0) - 65, 0x1F1E6 + iso.charCodeAt(1) - 65);
     }
+    function maskLen(mask) { return (mask.match(/#/g) || []).length; }
+    function maxDigits(c) { return c.iso === "OTHER" ? 15 : (c.mask ? maskLen(c.mask) : 12); }
+    function groupFree(d) {
+      var sizes = [3, 3, 2, 2, 2, 2, 2], out = [], i = 0, k = 0;
+      while (i < d.length) { var n = sizes[Math.min(k, sizes.length - 1)]; out.push(d.slice(i, i + n)); i += n; k++; }
+      return out.join(" ");
+    }
+    function formatDigits(d, c) {
+      d = d.slice(0, maxDigits(c));
+      if (!d) return "";
+      if (c.iso === "OTHER") return "+" + groupFree(d);
+      if (!c.mask) return groupFree(d);
+      var out = "", i = 0;
+      for (var k = 0; k < c.mask.length && i < d.length; k++) out += c.mask[k] === "#" ? d[i++] : c.mask[k];
+      return out;
+    }
+    function placeholderFor(c) {
+      if (c.iso === "OTHER") return "+44 20 1234 5678";
+      if (c.iso === "RU") return "900 000-00-00";
+      if (c.iso === "KZ") return "700 000-00-00";
+      return c.mask ? c.mask.replace(/#/g, "0") : "000 000 000";
+    }
+    // определение страны по международному номеру (цифры после «+»)
+    function detectCountry(all) {
+      if (all.charAt(0) === "7") return /^7[67]/.test(all) ? byIso.KZ : byIso.RU;
+      if (all.charAt(0) === "1") return country.iso === "CA" ? byIso.CA : byIso.US;
+      for (var i = 0; i < byDialLength.length; i++) if (all.indexOf(byDialLength[i].dial) === 0) return byDialLength[i];
+      return null;
+    }
+    function caretAfterDigits(str, n) {
+      if (n <= 0) return str.charAt(0) === "+" ? 1 : 0;
+      for (var i = 0, c = 0; i < str.length; i++) if (/\d/.test(str[i]) && ++c === n) return i + 1;
+      return str.length;
+    }
+
+    function setCountry(c, opts) {
+      opts = opts || {};
+      var digits = opts.digits != null ? opts.digits : phoneInput.value.replace(/\D/g, "");
+      if (country.iso === "OTHER" && c.iso !== "OTHER" && opts.digits == null) digits = ""; // из «+…» в страну — номер вводится заново
+      country = c;
+      $(".flag", ccBtn).textContent = flagOf(c.iso);
+      $(".cc-code", ccBtn).textContent = c.iso === "OTHER" ? "+" : "+" + c.dial;
+      ccBtn.setAttribute("aria-label", "Код страны: " + c.name + (c.dial ? ", +" + c.dial : ""));
+      phoneInput.placeholder = placeholderFor(c);
+      phoneInput.setAttribute("aria-label", c.iso === "OTHER" ? "Номер телефона с кодом страны" : "Номер телефона без кода страны");
+      phoneInput.value = formatDigits(digits, c);
+      if (phoneInput.getAttribute("aria-invalid") === "true") validateContact();
+    }
+
+    function onPhoneInput() {
+      var raw = phoneInput.value;
+      var caret = phoneInput.selectionStart == null ? raw.length : phoneInput.selectionStart;
+      var before = raw.slice(0, caret).replace(/\D/g, "").length;
+      var digits = raw.replace(/\D/g, "");
+      var intl = /^\s*(\+|00)/.test(raw);
+      if (intl && country.iso !== "OTHER") {
+        // ввели или вставили номер с кодом: «+44…», «0044…», автозаполнение «+7900…»
+        var skip = /^\s*00/.test(raw) ? 2 : 0;
+        var all = digits.slice(skip);
+        var found = detectCountry(all);
+        if (found) {
+          var rest = all.slice(found.dial.length);
+          before = Math.max(0, before - skip - found.dial.length);
+          setCountry(found, { digits: rest });
+          digits = rest;
+        } else if (all.length > 3) {
+          setCountry(OTHER, { digits: all });
+          digits = all; before = Math.max(0, before - skip);
+        }
+      } else if ((country.iso === "RU" || country.iso === "KZ") && digits.length === 11 && /^[78]/.test(digits)) {
+        digits = digits.slice(1); before = Math.max(0, before - 1); // «8 900…» / «7 900…» без плюса
+      }
+      var formatted = formatDigits(digits, country);
+      phoneInput.value = formatted;
+      if (document.activeElement === phoneInput) {
+        var pos = caretAfterDigits(formatted, before);
+        phoneInput.setSelectionRange(pos, pos);
+      }
+      if (phoneInput.getAttribute("aria-invalid") === "true") validateContact();
+    }
+    // Backspace/Delete «перепрыгивают» пробелы и дефисы и удаляют цифру
+    phoneInput.addEventListener("keydown", function (e) {
+      var s0 = phoneInput.selectionStart, s1 = phoneInput.selectionEnd, v = phoneInput.value;
+      if (s0 !== s1) return;
+      if (e.key === "Backspace" && s0 > 0 && /\D/.test(v[s0 - 1])) {
+        var i = s0 - 1; while (i > 0 && /\D/.test(v[i - 1])) i--;
+        if (i > 0) phoneInput.setSelectionRange(i, i);
+      } else if (e.key === "Delete" && s0 < v.length && /\D/.test(v[s0])) {
+        var j = s0; while (j < v.length && /\D/.test(v[j])) j++;
+        phoneInput.setSelectionRange(j, j);
+      }
+    });
+    phoneInput.addEventListener("input", onPhoneInput);
+    phoneInput.addEventListener("blur", function () { if (phoneInput.value.trim()) validateContact(); });
+
+    function onTgInput() {
+      var v = tgInput.value.trim();
+      var m = v.match(/(?:t(?:elegram)?\.me\/)([A-Za-z0-9_]+)/i); // вставили ссылку t.me/username
+      if (m) v = m[1];
+      v = v.replace(/^@+/, "").replace(/[^A-Za-z0-9_]/g, "");
+      if (v !== tgInput.value) tgInput.value = v;
+      if (tgInput.getAttribute("aria-invalid") === "true") validateContact();
+    }
+    tgInput.addEventListener("input", onTgInput);
+    tgInput.addEventListener("blur", function () { if (tgInput.value.trim()) validateContact(); });
+
+    function setMode(m, focus) {
+      mode = m;
+      phonePane.hidden = m !== "phone";
+      tgPane.hidden = m !== "telegram";
+      hint.textContent = HINT[m];
+      setError(phoneInput, "f-contact-err", ""); setError(tgInput, "f-contact-err", "");
+      phoneBox.classList.remove("is-invalid"); tgPane.classList.remove("is-invalid");
+      closeList(false);
+      if (focus) (m === "phone" ? phoneInput : tgInput).focus();
+    }
+    $all('input[name="contact_type"]', form).forEach(function (r) {
+      r.addEventListener("change", function () { if (r.checked) setMode(r.value, true); });
+    });
+
+    /* список стран */
+    var activeIdx = -1;
+    function options() { return $all('[role="option"]', ccList); }
+    function setActive(i, scroll) {
+      var opts = options();
+      if (!opts.length) { activeIdx = -1; ccSearch.removeAttribute("aria-activedescendant"); return; }
+      activeIdx = (i + opts.length) % opts.length;
+      opts.forEach(function (o, k) { o.classList.toggle("is-active", k === activeIdx); });
+      ccSearch.setAttribute("aria-activedescendant", opts[activeIdx].id);
+      if (scroll) opts[activeIdx].scrollIntoView({ block: "nearest" });
+    }
+    function makeOption(c) {
+      var o = document.createElement("div");
+      o.className = "cc-opt"; o.id = "cc-opt-" + c.iso; o.setAttribute("role", "option");
+      o.setAttribute("aria-selected", c.iso === country.iso ? "true" : "false");
+      o.dataset.iso = c.iso;
+      var f = document.createElement("span"); f.className = "flag"; f.setAttribute("aria-hidden", "true"); f.textContent = flagOf(c.iso);
+      var n = document.createElement("span"); n.className = "cc-name"; n.textContent = c.name;
+      var d = document.createElement("span"); d.className = "cc-dial"; d.textContent = c.dial ? "+" + c.dial : "+…";
+      o.appendChild(f); o.appendChild(n); o.appendChild(d);
+      return o;
+    }
+    function makeGroup(title, list, key) {
+      var g = document.createElement("div"); g.setAttribute("role", "group"); g.setAttribute("aria-labelledby", "cc-grp-" + key);
+      var h = document.createElement("div"); h.className = "cc-group"; h.id = "cc-grp-" + key; h.setAttribute("role", "presentation"); h.textContent = title;
+      g.appendChild(h);
+      list.forEach(function (c) { g.appendChild(makeOption(c)); });
+      return g;
+    }
+    function renderList(q) {
+      ccList.textContent = "";
+      q = (q || "").trim().toLowerCase();
+      var qd = q.replace(/\D/g, "");
+      if (!q) {
+        ccList.appendChild(makeGroup("Популярные", POPULAR.map(function (iso) { return byIso[iso]; }), "pop"));
+        ccList.appendChild(makeGroup("Все страны", sorted.filter(function (c) { return POPULAR.indexOf(c.iso) === -1; }).concat([OTHER]), "all"));
+      } else {
+        var res = sorted.filter(function (c) {
+          return c.name.toLowerCase().indexOf(q) !== -1 || (qd && c.dial.indexOf(qd) === 0) || c.iso.toLowerCase() === q;
+        });
+        res.forEach(function (c) { ccList.appendChild(makeOption(c)); });
+        ccList.appendChild(makeOption(OTHER));
+        ccEmpty.hidden = res.length > 0;
+      }
+      if (!q) ccEmpty.hidden = true;
+      var opts = options(), sel = 0;
+      opts.forEach(function (o, k) { if (o.dataset.iso === country.iso && !q) sel = k; });
+      setActive(sel, true);
+    }
+    function openList() {
+      ccPop.hidden = false;
+      ccBtn.setAttribute("aria-expanded", "true");
+      ccSearch.value = "";
+      renderList("");
+      ccSearch.focus({ preventScroll: true });
+      // на телефоне список может оказаться ниже края экрана — докручиваем, чтобы он был виден целиком
+      var r = ccPop.getBoundingClientRect();
+      if (r.bottom > window.innerHeight) window.scrollBy({ top: r.bottom - window.innerHeight + 16, behavior: reduceMotion ? "auto" : "smooth" });
+    }
+    function closeList(returnFocus) {
+      if (ccPop.hidden) return;
+      ccPop.hidden = true;
+      ccBtn.setAttribute("aria-expanded", "false");
+      ccSearch.removeAttribute("aria-activedescendant");
+      if (returnFocus) ccBtn.focus();
+    }
+    function choose(iso) {
+      setCountry(byIso[iso]);
+      closeList(false);
+      phoneInput.focus();
+      var end = phoneInput.value.length; phoneInput.setSelectionRange(end, end);
+    }
+    ccBtn.addEventListener("click", function () { if (ccPop.hidden) openList(); else closeList(true); });
+    ccBtn.addEventListener("keydown", function (e) {
+      if ((e.key === "ArrowDown" || e.key === "ArrowUp") && ccPop.hidden) { e.preventDefault(); openList(); }
+    });
+    ccSearch.addEventListener("input", function () { renderList(ccSearch.value); });
+    ccSearch.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setActive(activeIdx + 1, true); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setActive(activeIdx - 1, true); }
+      else if (e.key === "Home") { e.preventDefault(); setActive(0, true); }
+      else if (e.key === "End") { e.preventDefault(); setActive(options().length - 1, true); }
+      else if (e.key === "Enter") { e.preventDefault(); var o = options()[activeIdx]; if (o) choose(o.dataset.iso); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeList(true); }
+      else if (e.key === "Tab") { closeList(false); }
+    });
+    ccList.addEventListener("mousedown", function (e) { e.preventDefault(); }); // фокус остаётся в поиске
+    ccList.addEventListener("click", function (e) { var o = e.target.closest('[role="option"]'); if (o) choose(o.dataset.iso); });
+    ccList.addEventListener("mousemove", function (e) {
+      var o = e.target.closest('[role="option"]'); if (!o) return;
+      var i = options().indexOf(o); if (i !== activeIdx) setActive(i, false);
+    });
+    document.addEventListener("pointerdown", function (e) {
+      if (!ccPop.hidden && !ccPop.contains(e.target) && !ccBtn.contains(e.target)) closeList(false);
+    });
+
+    // страна по умолчанию: регион из языка браузера, если это страна СНГ; иначе Россия
+    (function () {
+      var langs = navigator.languages || [navigator.language || ""];
+      for (var i = 0; i < langs.length; i++) {
+        var r = (String(langs[i]).split("-")[1] || "").toUpperCase();
+        if (["BY", "KZ", "UZ", "KG", "TJ", "AM", "AZ", "GE", "MD", "TM", "UA"].indexOf(r) !== -1) { country = byIso[r]; break; }
+      }
+      setCountry(country, { digits: "" });
+      hint.textContent = HINT.phone;
+    })();
+
     function validateContact() {
-      var el = form.elements.contact, raw = el.value.trim();
-      var v = normalizeContact(raw), msg = "";
-      if (!raw) msg = "Оставьте телефон или ник в Telegram — иначе мы не сможем ответить.";
-      else if (v.charAt(0) === "@") { if (!TG_RE.test(v)) msg = "Ник в Telegram: от 5 символов, латиница, цифры и «_», например @ivan_petrov."; }
-      else if (!PHONE_RE.test(v)) msg = "Номер в формате +7 900 000-00-00 или 8 900 000-00-00.";
+      var msg = "", el;
+      if (mode === "telegram") {
+        el = tgInput;
+        var v = tgInput.value.trim();
+        if (!v) msg = "Укажите ник в Telegram — иначе мы не сможем ответить.";
+        else if (!TG_RE.test(v)) msg = "Ник в Telegram: 5–32 символа, латиница, цифры и «_», например ivan_petrov.";
+        tgPane.classList.toggle("is-invalid", !!msg);
+      } else {
+        el = phoneInput;
+        var d = phoneInput.value.replace(/\D/g, "");
+        if (!d) msg = "Оставьте номер телефона — иначе мы не сможем ответить.";
+        else if (country.iso === "OTHER") { if (d.length < 8) msg = "Введите номер полностью, вместе с кодом страны."; }
+        else if (country.mask) {
+          var need = maskLen(country.mask);
+          if (d.length !== need) msg = "Номер неполный: для страны «" + country.name + "» после +" + country.dial + " нужно " + need + " цифр.";
+        } else if (d.length < 6) msg = "Номер слишком короткий — проверьте, пожалуйста.";
+        phoneBox.classList.toggle("is-invalid", !!msg);
+      }
       return setError(el, "f-contact-err", msg);
+    }
+    function contactValue() {
+      if (mode === "telegram") return "@" + tgInput.value.trim();
+      return "+" + (country.iso === "OTHER" ? "" : country.dial) + phoneInput.value.replace(/\D/g, "");
     }
     function validateComment() {
       var el = form.elements.comment;
@@ -384,13 +671,12 @@
     }
 
     // Проверка «на лету» после первого ухода из поля
-    form.elements.name.addEventListener("blur", validateName);
-    form.elements.contact.addEventListener("blur", validateContact);
+    // при уходе из поля показываем ошибку, только если что-то введено: пустые поля подсвечиваются при отправке
+    // (иначе сообщение сдвигает форму, и следующий клик промахивается)
+    form.elements.name.addEventListener("blur", function () { if (form.elements.name.value.trim()) validateName(); });
     form.elements.consent.addEventListener("change", validateConsent);
-    ["name", "contact"].forEach(function (n) {
-      form.elements[n].addEventListener("input", function () {
-        if (form.elements[n].getAttribute("aria-invalid") === "true") (n === "name" ? validateName : validateContact)();
-      });
+    form.elements.name.addEventListener("input", function () {
+      if (form.elements.name.getAttribute("aria-invalid") === "true") validateName();
     });
 
     function showStatus(kind, text, withTg) {
@@ -417,6 +703,8 @@
     function success() {
       showStatus("success", "Заявка отправлена! Ответим в течение рабочего дня.", false);
       form.reset();
+      setMode("phone", false);
+      setCountry(country, { digits: "" });
       if (counter) counter.textContent = "0 / 1000";
       cooldown(30);
     }
@@ -443,11 +731,15 @@
 
       var payload = {
         name: form.elements.name.value.trim().slice(0, 60),
-        contact: normalizeContact(form.elements.contact.value).slice(0, 40),
+        contact: contactValue().slice(0, 40),
+        contact_type: mode,
+        country: mode === "phone" ? country.iso : "",
         niche: form.elements.niche.value,
         services: $all('input[name="services"]:checked', form).map(function (c) { return c.value; }),
         comment: form.elements.comment.value.trim().slice(0, 1000),
         consent: true,
+        consent_version: (CFG.legal && CFG.legal.consentVersion) || "",
+        consent_url: (CFG.siteUrl || location.origin).replace(/\/$/, "") + "/consent.html",
         page: location.href,
         utm: getUtm(),
         ts: new Date().toISOString()
