@@ -5,7 +5,7 @@ globalThis.__MOCK_LOG__ = [];
 new Function(readFileSync(new URL('scriptable-mock.js', here), 'utf8'))();
 const code = readFileSync(new URL('../pixel-fx.js', here), 'utf8');
 const AF = Object.getPrototypeOf(async function () {}).constructor;
-for (const [fam, param] of [['small', ''], ['medium', 'BYN:RUB,USD:100'], ['large', 'RUB:BYN::cloud'], ['extraLarge', 'USD:EUR:1:city'],
+for (const [fam, param] of [['small', ''], ['medium', 'BYN:RUB,USD:100'], ['large', 'RUB:BYN::med'], ['extraLarge', 'USD:EUR:1:field'], ['small', 'BYN:USD:1:med'], ['medium', 'BYN:RUB,USD:100:med'],
   ['accessoryRectangular', ''], ['accessoryInline', 'KZT:BYN:1000'], ['accessoryCircular', ''], ['medium', 'ABC:XYZ']]) {
   globalThis.__WIDGET__ = null;
   const config = { runsInWidget: true, widgetFamily: fam };

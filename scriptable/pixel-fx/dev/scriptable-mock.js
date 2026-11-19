@@ -23,6 +23,17 @@
     static systemFont(s) { return new Font(`${s}px sans-serif`, s); }
     static boldSystemFont(s) { return new Font(`bold ${s}px sans-serif`, s); }
     static semiboldSystemFont(s) { return new Font(`600 ${s}px sans-serif`, s); }
+    static boldRoundedSystemFont(s) { return new Font(`bold ${s}px "Nunito", "DejaVu Sans", sans-serif`, s); }
+    static mediumRoundedSystemFont(s) { return new Font(`500 ${s}px "Nunito", "DejaVu Sans", sans-serif`, s); }
+  }
+  class Path {
+    constructor() { this.cmds = []; }
+    move(p) { this.cmds.push(['M', p.x, p.y]); }
+    addLine(p) { this.cmds.push(['L', p.x, p.y]); }
+    addQuadCurve(p, c) { this.cmds.push(['Q', c.x, c.y, p.x, p.y]); }
+    addCurve(p, c1, c2) { this.cmds.push(['C', c1.x, c1.y, c2.x, c2.y, p.x, p.y]); }
+    closeSubpath() { this.cmds.push(['Z']); }
+    addRoundedRect(r, cw) { this.cmds.push(['RR', r.x, r.y, r.width, r.height, cw]); }
   }
   class DrawContext {
     constructor() { this.opaque = true; this.respectScreenScale = false; this.align = 'left'; this.ops = 0; }
@@ -40,6 +51,20 @@
     get size() { return this._size; }
     setFillColor(c) { this.fill = c; if (this.g) this.g.fillStyle = c.css; }
     fillRect(r) { this.ops++; if (this.g) this.g.fillRect(r.x, r.y, r.width, r.height); }
+    fillEllipse(r) { this.ops++; if (this.g) { this.g.beginPath(); this.g.ellipse(r.x + r.width / 2, r.y + r.height / 2, r.width / 2, r.height / 2, 0, 0, Math.PI * 2); this.g.fill(); } }
+    setStrokeColor(c) { if (this.g) this.g.strokeStyle = c.css; }
+    setLineWidth(w) { if (this.g) this.g.lineWidth = w; }
+    addPath(p) { this.path = p; }
+    tracePath() {
+      const g = this.g; g.beginPath();
+      for (const c of this.path.cmds) {
+        if (c[0] === 'M') g.moveTo(c[1], c[2]); else if (c[0] === 'L') g.lineTo(c[1], c[2]);
+        else if (c[0] === 'Q') g.quadraticCurveTo(c[1], c[2], c[3], c[4]); else if (c[0] === 'C') g.bezierCurveTo(c[1], c[2], c[3], c[4], c[5], c[6]);
+        else if (c[0] === 'Z') g.closePath(); else if (c[0] === 'RR') g.roundRect(c[1], c[2], c[3], c[4], c[5]);
+      }
+    }
+    fillPath() { this.ops++; if (this.g) { this.tracePath(); this.g.fill(); } }
+    strokePath() { this.ops++; if (this.g) { this.tracePath(); this.g.stroke(); } }
     setFont(f) { this.font = f; if (this.g) this.g.font = f.css; }
     setTextColor(c) { this.textColor = c; }
     setTextAlignedLeft() { this.align = 'left'; }
@@ -85,8 +110,8 @@
   }
   const Timer = { schedule(ms, rep, cb) { const id = setTimeout(cb, ms); return { invalidate: () => clearTimeout(id) }; } };
   Object.assign(G, {
-    Size, Point, Rect, Color, Font, DrawContext, ListWidget, LinearGradient, FileManager, Request, Timer,
-    Device: { isUsingDarkAppearance: () => !!G.__MOCK_DARK__ },
+    Path, Size, Point, Rect, Color, Font, DrawContext, ListWidget, LinearGradient, FileManager, Request, Timer,
+    Device: { isUsingDarkAppearance: () => !!G.__MOCK_DARK__, screenSize: () => new Size(390, 844) },
     URLScheme: { forRunningScript: () => 'scriptable:///run/Pixel%20FX' },
     Script: { setWidget: (w) => { G.__WIDGET__ = w; }, complete: () => {} },
     log: (...a) => (G.__MOCK_LOG__ || []).push(a.join(' ')),

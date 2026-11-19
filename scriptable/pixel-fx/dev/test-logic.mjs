@@ -30,9 +30,10 @@ ok('тренд', () => {
 });
 ok('параметр BYN:RUB,USD:100', () => {
   const c = X.resolveConfig('BYN:RUB,USD:100', null);
-  assert.deepEqual([c.base, c.targets, c.amountMinor, c.scene], ['BYN', ['RUB', 'USD'], 10000n, 'sign']);
-  const d = X.resolveConfig('rub:byn::city', { base: 'BYN', targets: ['USD'], amount: '1000', scene: 'cloud' });
-  assert.deepEqual([d.base, d.targets, d.amountMinor, d.scene], ['RUB', ['BYN'], 100000n, 'city']);
+  assert.deepEqual([c.base, c.targets, c.amountMinor, c.scene], ['BYN', ['RUB', 'USD'], 10000n, 'field']);
+  const d = X.resolveConfig('rub:byn::med', { base: 'BYN', targets: ['USD'], amount: '1000', scene: 'cloud' });
+  assert.deepEqual([d.base, d.targets, d.amountMinor, d.scene], ['RUB', ['BYN'], 100000n, 'med']);
+  assert.equal(X.resolveConfig('BYN:RUB:1:city', null).scene, 'field'); // старые названия сцен
   const e = X.resolveConfig('USD', { base: 'BYN', targets: ['USD'], amount: '1', scene: 'sign' });
   assert.deepEqual(e.targets, ['EUR']); // цель = база отброшена, подставлена другая
   assert.throws(() => X.resolveConfig('XXX:RUB', null), /Не понял Parameter/);

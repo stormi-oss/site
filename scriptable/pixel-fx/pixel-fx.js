@@ -1,16 +1,17 @@
 // PIXEL_FX_MAIN — эта метка нужна загрузчику, не удаляйте её.
 // =====================================================================
-//  Пиксельный конвертер валют для Scriptable (iOS)
+//  Курсы НБРБ — живописный виджет-конвертер для Scriptable (iOS)
 //  Курсы: Национальный банк Республики Беларусь (api.nbrb.by)
 //  Валюты: BYN, RUB, UAH, USD, EUR, CNY, KZT
 //
 //  Ничего настраивать в коде не нужно:
 //   • первый запуск в приложении — мастер настройки;
 //   • поле Parameter у виджета: BYN:RUB,USD:100  (база:цели:сумма[:сцена])
-//     сцена: sign — табличка, cloud — облако, city — ночной город.
+//     сцена: field — ночное поле, med — медицинский монитор.
+//   • тап по виджету — конвертер; в меню — живая анимация сцены.
 // =====================================================================
 
-const VERSION = '1.0.0';
+const VERSION = '2.0.0';
 
 // Подмена даты ТОЛЬКО для сцены (сезон, время суток). null — реальное время.
 // Пример: '2026-01-15T22:30:00' — зимняя ночь.
@@ -36,36 +37,15 @@ const HISTORY_KEEP_DAYS = 21;         // сколько дней храним в
 const RATE_PREC = 1000000n;           // курсы храним как целые × 10^6
 const CACHE_VERSION = 2;
 
-const CELL = 5;                       // размер «пикселя» сцены в точках iOS
-const CHAR_W = 0.62;                  // ширина символа моноширинного шрифта, доля от кегля
-
 const SCENES = {
-  sign: 'Поле: курс на табличке',
-  cloud: 'Поле: курс в облаке',
-  city: 'Ночной город',
+  field: 'Ночное поле',
+  med: 'Медицина: монитор',
 };
-const DEFAULT_SETTINGS = { base: 'BYN', targets: ['RUB', 'USD'], amount: '1', scene: 'sign' };
+// Старые названия сцен из версии 1.x продолжают работать.
+const SCENE_ALIASES = { sign: 'field', cloud: 'field', city: 'field', night: 'field', medicine: 'med', monitor: 'med' };
+const sceneKey = (k) => { const v = String(k || '').toLowerCase(); return SCENES[v] ? v : SCENE_ALIASES[v] || null; };
+const DEFAULT_SETTINGS = { base: 'BYN', targets: ['RUB', 'USD'], amount: '1', scene: 'field' };
 
-// ---------------------------------------------------------------------
-//  Палитра: 20 цветов, общая для всех сцен
-// ---------------------------------------------------------------------
-const PAL = {
-  nightDeep: '#0b1030', night: '#25306b', dayTop: '#3d8be0', dayBottom: '#a9dcf7',
-  duskOrange: '#f5a05a', duskPink: '#d8607e', cloud: '#f6f8fc', cloudShade: '#aeb9d0',
-  grassDeep: '#1d4d2a', grassDark: '#2f7a34', grass: '#4fae4c', grassLight: '#a4d36a',
-  trunk: '#734a2a', trunkDark: '#43291a', wood: '#e3b87f',
-  leafOrange: '#e9822c', gold: '#f7c936', red: '#de4459', water: '#78b4e6', ink: '#17151f',
-};
-// Затемнение земли и предметов ночью / в сумерках — внутри той же палитры.
-const NIGHT_MAP = {
-  grassLight: 'grassDark', grass: 'grassDark', grassDark: 'grassDeep', grassDeep: 'nightDeep',
-  cloud: 'cloudShade', cloudShade: 'night', wood: 'trunk', trunk: 'trunkDark', trunkDark: 'ink',
-  leafOrange: 'trunk', gold: 'leafOrange', red: 'trunk', water: 'night',
-};
-const DUSK_MAP = {
-  grassLight: 'grass', grass: 'grassDark', grassDark: 'grassDeep',
-  cloud: 'cloudShade', wood: 'leafOrange', leafOrange: 'red',
-};
 
 // =====================================================================
 //  Ошибки
@@ -350,7 +330,7 @@ function loadSettings() {
     base: s.base,
     targets: (Array.isArray(s.targets) ? s.targets : []).filter((c) => CURRENCIES.includes(c) && c !== s.base).slice(0, 2),
     amount: parseAmount(s.amount) ? String(s.amount) : '1',
-    scene: SCENES[s.scene] ? s.scene : 'sign',
+    scene: sceneKey(s.scene) || 'field',
   };
 }
 
@@ -360,7 +340,7 @@ function normalizeTargets(base, targets) {
   return out;
 }
 
-// Параметр: «BYN:RUB,USD:100» или «BYN:RUB,USD:100:cloud». Любая часть может отсутствовать.
+// Параметр: «BYN:RUB,USD:100» или «BYN:RUB,USD:100:med». Любая часть может отсутствовать.
 function parseParam(param) {
   const parts = param.split(':').map((p) => p.trim());
   const res = {};
@@ -380,8 +360,8 @@ function parseParam(param) {
     res.amount = parts[2];
   }
   if (parts[3]) {
-    const sc = parts[3].toLowerCase();
-    if (!SCENES[sc]) throw bad();
+    const sc = sceneKey(parts[3]);
+    if (!sc) throw bad();
     res.scene = sc;
   }
   return res;
@@ -444,34 +424,910 @@ function buildSeries(cfg, target, data) {
   return out;
 }
 
+
 // =====================================================================
-//  Детерминированный рандом
+//  SceneKit — движок сцен. Чистый JS без API Scriptable:
+//  один и тот же код рисует кадр виджета (DrawContext) и живую
+//  анимацию в WebView (canvas). Поэтому внутри — только математика
+//  и вызовы «художника» P: rect, ellipse, poly, path, strokes,
+//  vgrad, glow, rrect, text.
 // =====================================================================
-function hashStr(s) {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
-function makeRng(seed) {
-  let a = seed >>> 0;
-  const next = () => {
-    a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+function SceneKit() {
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const mod = (a, n) => ((a % n) + n) % n;
+  const alphaOf = (c) => (c.length > 3 ? c[3] : 1);
+  const hex = (h, a) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255, a === undefined ? 1 : a]; };
+  const A = (c, a) => [c[0], c[1], c[2], a];
+  const mix = (c1, c2, t) => [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t), lerp(alphaOf(c1), alphaOf(c2), t)];
+  const WHITE = [255, 255, 255, 1];
+  const BLACK = [0, 0, 0, 1];
+
+  function hashStr(s) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  // Детерминированный генератор: одинаковый seed — одинаковая картинка.
+  function rng(seed) {
+    let a = seed >>> 0;
+    const f = () => {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    f.range = (lo, hi) => lo + f() * (hi - lo);
+    f.int = (lo, hi) => lo + Math.floor(f() * (hi - lo + 1));
+    f.chance = (p) => f() < p;
+    f.pick = (arr) => arr[Math.floor(f() * arr.length)];
+    return f;
+  }
+  function sampleStops(stops, t) {
+    t = clamp(t, 0, 1);
+    let i = 0;
+    while (i < stops.length - 2 && t > stops[i + 1][0]) i++;
+    const [ta, ca] = stops[i];
+    const [tb, cb] = stops[i + 1];
+    return mix(ca, cb, tb > ta ? clamp((t - ta) / (tb - ta), 0, 1) : 0);
+  }
+
+  // ---------- текст: оценка ширины (у DrawContext нет измерения текста) ----------
+  const CHAR_W = { mono: 0.62, round: 0.6 };
+  function fit(str, width, max, min, kind) {
+    const n = Math.max(1, String(str).length);
+    return Math.max(min || 7, Math.min(max, Math.floor(width / (n * CHAR_W[kind || 'mono']))));
+  }
+  function arrow(P, trend, x, y, s, th) {
+    const c = th[trend];
+    if (!c) return;
+    if (trend === 'up') P.poly([x, y + s * 0.85, x + s / 2, y + s * 0.1, x + s, y + s * 0.85], c);
+    else if (trend === 'down') P.poly([x, y + s * 0.15, x + s, y + s * 0.15, x + s / 2, y + s * 0.9], c);
+    else { P.rrect(x, y + s * 0.28, s, s * 0.15, s * 0.07, c); P.rrect(x, y + s * 0.58, s, s * 0.15, s * 0.07, c); }
+  }
+  const fmtNum = (v) => (v >= 100 ? v.toFixed(2) : v >= 0.01 ? v.toFixed(4) : v.toPrecision(5));
+
+  // =====================================================================
+  //  СЦЕНА 1. Ночное поле: небо, облака под луной, холмы, поле,
+  //  одинокое дерево, старая машина, светлячки.
+  // =====================================================================
+  const SKY = {
+    night: { sky: [[0, '#02040a'], [0.45, '#071121'], [0.8, '#0f2238'], [1, '#1b3a52']], cloudLit: '#f1dcab', cloudMid: '#6c7275', cloudShadow: '#121a25', hill: '#0a161b', rim: '#35585a', light: '#f8ecd2', tint: '#040b15', tintAmt: 0.5, stars: 1, haze: '#1f4256' },
+    dusk: { sky: [[0, '#151938'], [0.4, '#463360'], [0.75, '#bd6679'], [1, '#f3a86b']], cloudLit: '#ffc890', cloudMid: '#a05e7b', cloudShadow: '#2c2346', hill: '#241e3a', rim: '#d68a6a', light: '#ffb470', tint: '#2a1c3a', tintAmt: 0.32, stars: 0.35, haze: '#e39a76' },
+    dawn: { sky: [[0, '#1a2250'], [0.45, '#5c5a8e'], [0.8, '#e5a0a2'], [1, '#ffd4a2']], cloudLit: '#ffe2ba', cloudMid: '#b78aa7', cloudShadow: '#464571', hill: '#33355a', rim: '#f0b090', light: '#ffdaa8', tint: '#2a2c55', tintAmt: 0.3, stars: 0.25, haze: '#f2c2a8' },
+    day: { sky: [[0, '#1f62ad'], [0.55, '#5d9fd8'], [1, '#d2e8f3']], cloudLit: '#ffffff', cloudMid: '#dbe4ee', cloudShadow: '#8ea3b9', hill: '#4c7c64', rim: '#a8c9a0', light: '#fff4d6', tint: '#000000', tintAmt: 0, stars: 0, haze: '#d2e8f3' },
   };
-  return {
-    next,
-    int: (lo, hi) => lo + Math.floor(next() * (hi - lo + 1)),
-    chance: (p) => next() < p,
-    pick: (arr) => arr[Math.floor(next() * arr.length)],
+  const SEASON = {
+    summer: { grass: ['#2b6828', '#378030', '#47943a', '#5ea947', '#80c05a'], far: '#4c8a3e', near: '#3a8331', crown: ['#143a1c', '#225428', '#377234', '#579545'], flowers: ['#f1d76a', '#ffffff', '#8fb8f0'], flowerRate: 0.6, leaves: ['#47943a', '#80c05a'] },
+    spring: { grass: ['#387a2b', '#489135', '#60a742', '#7ebc51', '#a2d169'], far: '#5a9945', near: '#478f37', crown: ['#224f29', '#387234', '#589845', '#84bf5e'], flowers: ['#f6d36b', '#ffffff', '#f4a6c6', '#9fc0ff'], flowerRate: 1.5, blossom: ['#f7c9d9', '#ffffff', '#f19bbb'], leaves: ['#f7c9d9', '#ffffff'] },
+    autumn: { grass: ['#56682a', '#76782e', '#8c8234', '#a38a3a', '#677830'], far: '#78783a', near: '#686e2f', crown: ['#6a2f10', '#9a4515', '#c96a20', '#eeaa45'], flowers: ['#e8c060'], flowerRate: 0.15, leaves: ['#c3611c', '#eaa23c', '#a8321c'] },
+    winter: { grass: ['#93a5ba', '#b6c4d4', '#7b8ca2'], far: '#c7d4e3', near: '#eef3f8', crown: null, flowers: [], flowerRate: 0, leaves: null, snow: true },
   };
+
+  function fieldPalette(S) {
+    const b = SKY[S.tod] || SKY.night;
+    const se = SEASON[S.season] || SEASON.summer;
+    const tint = (h, k) => mix(hex(h), hex(b.tint), b.tintAmt * (k === undefined ? 1 : k));
+    return {
+      b, se,
+      sky: b.sky.map(([t, h]) => [t, hex(h)]),
+      cloudLit: hex(b.cloudLit), cloudMid: hex(b.cloudMid), cloudShadow: hex(b.cloudShadow),
+      hill: hex(b.hill), rim: hex(b.rim), light: hex(b.light), haze: hex(b.haze),
+      grass: se.grass.map((h) => tint(h, 0.8)), far: tint(se.far, 0.95), near: tint(se.near, 0.75),
+      crown: se.crown ? se.crown.map((h) => tint(h, 1.05)) : null,
+      flowers: se.flowers.map((h) => tint(h, 0.55)),
+      blossom: se.blossom ? se.blossom.map((h) => tint(h, 0.6)) : null,
+      leaves: se.leaves ? se.leaves.map((h) => tint(h, 0.6)) : null,
+      trunk: tint('#2c2218', 0.9), bark: tint('#5a4632', 0.9), snow: tint('#f4f8fc', 0.45),
+      car: tint(S.tod === 'day' ? '#3e5c5e' : '#34484b', 0.9), carDark: tint('#121719', 0.4),
+      glass: tint('#6d8a96', 0.9), chrome: tint('#d5dde0', 0.7),
+    };
+  }
+
+  // Раскладка поля по размеру виджета (в точках).
+  function fieldLayout(S) {
+    const W = S.W; const H = S.H; const f = S.family;
+    if (f === 'small') return { horizon: H * 0.58, tree: { x: W * 0.68, s: H * 0.2 }, car: false, panel: { x: 8, y: H * 0.5, w: W - 16, h: H * 0.5 - 8 }, light: [W * 0.18, H * 0.16] };
+    if (f === 'medium') return { horizon: H * 0.64, tree: { x: W * 0.77, s: H * 0.25 }, car: true, panel: { x: 10, y: 10, w: W * 0.55, h: H - 20 }, light: [W * 0.94, H * 0.15] };
+    if (f === 'large') return { horizon: H * 0.6, tree: { x: W * 0.74, s: H * 0.2 }, car: true, panel: { x: 12, y: 12, w: W * 0.6, h: H * 0.56 }, light: [W * 0.88, H * 0.09] };
+    if (f === 'extraLarge') return { horizon: H * 0.66, tree: { x: W * 0.77, s: H * 0.2 }, car: true, panel: { x: 14, y: 14, w: W * 0.48, h: H - 28 }, light: [W * 0.6, H * 0.13] };
+    // live — полноэкранная анимация (портрет)
+    const ph = Math.min(H * 0.34, 300);
+    return { horizon: H * 0.7, tree: { x: W * 0.64, s: Math.min(W, H) * 0.2 }, car: true, panel: { x: 16, y: Math.max(54, H * 0.07), w: W - 32, h: ph }, light: [W * 0.22, Math.max(54, H * 0.07) + ph + H * 0.07] };
+  }
+
+  function drawStars(P, S, C, L, t, twinkleOnly) {
+    if (C.b.stars <= 0) return;
+    const R = rng(S.seedDay ^ 0x51ed);
+    const n = Math.round((P.W * L.horizon) / 230 * C.b.stars * (S.trend === 'up' ? 1.3 : 1));
+    for (let i = 0; i < n; i++) {
+      const x = R() * P.W;
+      const y = Math.pow(R(), 1.3) * L.horizon * 0.92;
+      const r = 0.3 + Math.pow(R(), 3) * 1.1;
+      const fade = 1 - (y / L.horizon) * 0.65;
+      let a = (0.25 + R() * 0.75) * fade;
+      const warm = R() < 0.25;
+      const tw = R() < 0.18;
+      const ph = R() * 6.28;
+      if (twinkleOnly !== tw) continue; // мерцающие рисуются в динамическом слое
+      if (tw) a *= 0.55 + 0.45 * Math.sin(t * (1.5 + ph * 0.3) + ph);
+      const c = warm ? [255, 232, 196, a] : [235, 242, 255, a];
+      P.ellipse(x, y, r, r, c);
+      if (r > 1.05) {
+        P.glow(x, y, r * 6, A(c, a * 0.35));
+        P.strokes([x - r * 4, y, x + r * 4, y, x, y - r * 4, x, y + r * 4], A(c, a * 0.35), 0.5);
+      }
+    }
+  }
+
+  function fieldBack(P, S, C, L) {
+    const W = P.W;
+    P.vgrad(0, 0, W, Math.ceil(L.horizon) + 2, C.sky);
+    drawStars(P, S, C, L, 0, false);
+    const [lx, ly] = L.light;
+    const k = Math.min(W, P.H) / 160;
+    if (S.tod === 'night') {
+      P.glow(lx, ly, 70 * k, A(C.light, 0.22));
+      P.glow(lx, ly, 22 * k, A(C.light, 0.45));
+      P.ellipse(lx, ly, 7 * k, 7 * k, C.light);
+      P.ellipse(lx - 2 * k, ly + 1.5 * k, 1.8 * k, 1.5 * k, A(mix(C.light, C.cloudMid, 0.5), 0.5));
+      P.ellipse(lx + 2.5 * k, ly - 2 * k, 1.2 * k, 1.1 * k, A(mix(C.light, C.cloudMid, 0.5), 0.45));
+    } else if (S.tod === 'day') {
+      if (S.trend !== 'down') { P.glow(lx, ly, 90 * k, A(C.light, 0.5)); P.ellipse(lx, ly, 9 * k, 9 * k, A(WHITE, 0.95)); }
+    } else { // низкое солнце у горизонта
+      const sx = S.tod === 'dawn' ? W * 0.12 : W * 0.3;
+      P.glow(sx, L.horizon, 140 * k, A(C.light, 0.55));
+      P.glow(sx, L.horizon, 40 * k, A(C.light, 0.7));
+    }
+    // дымка у горизонта
+    P.vgrad(0, L.horizon - P.H * 0.14, W, P.H * 0.14 + 1, [[0, A(C.haze, 0)], [1, A(C.haze, 0.3)]]);
+  }
+
+  // Кучевое облако: «купол» из множества клубов. Каждый клуб затеняется целиком
+  // (тень → полутон → освещённая шапка), рисуем снизу вверх — верхние клубы
+  // перекрывают нижние, и получается объём, как на живописных фонах.
+  function cloud(P, x, y, w, C, seed, dark, light) {
+    const R = rng(seed);
+    const h = w * 0.42;
+    const lit = mix(C.cloudLit, C.cloudShadow, dark);
+    const mid = mix(C.cloudMid, C.cloudShadow, dark * 0.6);
+    const sh = C.cloudShadow;
+    const cx0 = x + w / 2; const base = y + h;
+    let lx = light[0] - cx0; let ly = Math.min(light[1] - (y + h / 2), -Math.abs(light[0] - cx0) * 0.5 - 20);
+    const ln = Math.hypot(lx, ly) || 1; lx /= ln; ly /= ln;
+    // рваные тёмные «хвосты» снизу
+    for (let i = 0; i < 6; i++) P.ellipse(x + R() * w, base - h * (0.05 + R() * 0.12), w * (0.12 + R() * 0.22), h * (0.04 + R() * 0.05), A(sh, 0.25 + R() * 0.3));
+    const puffs = [];
+    const m = 26 + Math.round(w / 6);
+    const peak = 0.3 + R() * 0.4; // где самая высокая «башня»
+    for (let i = 0; i < m; i++) {
+      const u = R();
+      const dome = Math.max(0, 1 - Math.pow(Math.abs(u - peak) / (u < peak ? peak : 1 - peak), 1.6));
+      const r = w * (0.035 + 0.06 * R()) * (0.55 + dome * 0.8);
+      const py = base - r * 0.6 - dome * h * (0.35 + 0.55 * R());
+      puffs.push([x + w * (0.04 + 0.92 * u), py, r]);
+    }
+    // Слои по всей массе облака: тень → полутон → мягкий свет. Мягкий свет — это
+    // размытые пятна (glow), поэтому клубы сливаются, а не выглядят как «монетки».
+    const ryOf = (py, r) => Math.min(r * 0.92, (base - py) + r * 0.25); // плоское дно
+    for (const [px, py, r] of puffs) P.ellipse(px, py, r * 1.05, ryOf(py, r), A(sh, 0.97));
+    for (const [px, py, r] of puffs) P.ellipse(px + lx * r * 0.18, py + ly * r * 0.2, r * 0.82, ryOf(py, r) * 0.78, A(mid, 0.55));
+    for (const [px, py, r] of puffs) P.glow(px + lx * r * 0.4, py + ly * r * 0.42, r * 0.95, A(lit, 0.75), 6);
+    for (const [px, py, r] of puffs) if (R() < 0.35) P.glow(px + lx * r * 0.55, py + ly * r * 0.55, r * 0.45, A(mix(lit, WHITE, 0.4), 0.6), 5);
+    P.glow(cx0 + lx * w * 0.2, y + h * 0.4, w * 0.5, A(lit, 0.06));
+  }
+
+  // Облака дрейфуют: позиция зависит от времени, поэтому каждое обновление виджета — новый кадр.
+  function fieldClouds(P, S, C, L, t) {
+    const R = rng(S.seedDay ^ 0x9e37);
+    const n = { up: 2, eq: 5, down: 6 }[S.trend] || 3;
+    const T = S.epoch + t;
+    // «главное» облако рядом со светом: оно всегда в кадре и медленно покачивается
+    const hw = P.W * (S.family === 'small' ? 0.55 : 0.36);
+    const side = L.light[0] > P.W / 2 ? -1 : 1;
+    const hx = L.light[0] + side * hw * 0.15 - hw / 2 + Math.sin(T * 0.03) * P.W * 0.04;
+    const hy = L.light[1] + P.H * 0.04;
+    cloud(P, hx, hy, hw, C, (S.seedDay ^ 0x4e1d) >>> 0, S.trend === 'down' ? 0.55 : 0, L.light);
+    for (let i = 0; i < n; i++) {
+      const w = P.W * (0.26 + R() * 0.26) * (n > 4 ? 1.05 : 1.15);
+      const y = L.horizon * (0.02 + R() * 0.42);
+      const x0 = R() * (P.W + w);
+      const speed = (3 + R() * 5) * (0.6 + S.wind.power * 0.25);
+      const span = P.W + w * 1.6;
+      const x = mod(x0 + T * speed * S.wind.dir, span) - w * 0.8;
+      cloud(P, x, y, w, C, (S.seedDay + i * 7919) >>> 0, S.trend === 'down' ? 0.55 : 0, L.light);
+    }
+    drawStars(P, S, C, L, t, true);
+  }
+
+  function hills(P, C, hz, list) {
+    for (const [cf, hf, wf] of list) {
+      const cx = cf * P.W; const hh = hf * P.H; const ww = wf * P.W;
+      const pts = [];
+      for (let x = cx - ww; x <= cx + ww + 0.1; x += 4) {
+        const u = (x - cx) / ww;
+        const bell = (Math.cos(Math.PI * clamp(u, -1, 1)) + 1) / 2;
+        pts.push([x, hz - hh * Math.pow(bell, 0.8) - Math.sin(x * 0.07) * 0.6]);
+      }
+      const cmds = [['M', cx - ww, hz + 1]].concat(pts.map((p) => ['L', p[0], p[1]])).concat([['L', cx + ww, hz + 1], ['Z']]);
+      P.path(cmds, C.hill);
+      P.path(pts.map((p, i) => [i ? 'L' : 'M', p[0], p[1]]), A(C.rim, 0.35), 1);
+    }
+  }
+
+  function treeBase(S, L) {
+    const gy = L.horizon + (S.H - L.horizon) * 0.14;
+    return { tx: L.tree.x, gy, s: L.tree.s };
+  }
+
+  // Голое зимнее дерево — рекурсивные ветки со снегом.
+  function bareTree(P, C, tx, gy, s, sway) {
+    const byDepth = [];
+    const snow = [];
+    const R = rng(4242);
+    const grow = (x, y, ang, len, d) => {
+      const x2 = x + Math.cos(ang) * len + sway * (7 - d) * 0.15;
+      const y2 = y + Math.sin(ang) * len;
+      (byDepth[d] = byDepth[d] || []).push(x, y, x2, y2);
+      if (d >= 2 && R() < 0.6) snow.push(x, y - 0.8, x2, y2 - 0.8);
+      if (d >= 7) return;
+      const spread = 0.32 + R() * 0.25;
+      grow(x2, y2, ang - spread, len * (0.68 + R() * 0.1), d + 1);
+      grow(x2, y2, ang + spread, len * (0.68 + R() * 0.1), d + 1);
+      if (d < 3 && R() < 0.5) grow(x2, y2, ang + (R() - 0.5) * 0.3, len * 0.6, d + 2);
+    };
+    grow(tx, gy - s * 0.95, -Math.PI / 2, s * 0.45, 1);
+    byDepth.forEach((segs, d) => { if (segs) P.strokes(segs, C.trunk, Math.max(0.5, s * 0.07 * Math.pow(0.68, d))); });
+    P.strokes(snow, A(C.snow, 0.75), 0.9);
+  }
+
+  function trunk(P, C, tx, gy, s, bare) {
+    const h = s * 1.0;
+    P.path([['M', tx - s * 0.08, gy + 1], ['Q', tx - s * 0.03, gy - h * 0.5, tx - s * 0.04, gy - h], ['L', tx + s * 0.04, gy - h], ['Q', tx + s * 0.03, gy - h * 0.5, tx + s * 0.09, gy + 1], ['Z']], C.trunk);
+    P.path([['M', tx - s * 0.05, gy], ['Q', tx - s * 0.02, gy - h * 0.5, tx - s * 0.03, gy - h]], A(C.bark, 0.5), 0.8);
+    if (!bare) {
+      P.strokes([tx, gy - h * 0.75, tx - s * 0.5, gy - h * 1.2, tx, gy - h * 0.85, tx + s * 0.45, gy - h * 1.3, tx, gy - h, tx + s * 0.05, gy - h * 1.5], C.trunk, s * 0.035);
+    }
+  }
+
+  // Крона из «комков» листвы: тёмный слой → средний → блики к свету. sway — покачивание от ветра.
+  function crown(P, S, C, L, t) {
+    const { tx, gy, s } = treeBase(S, L);
+    if (!C.crown) { bareTree(P, C, tx, gy, s, Math.sin((S.epoch + t) * 0.7) * S.wind.power * 0.4); return; }
+    const R = rng(S.seedStable);
+    const cx = tx; const cy = gy - s * 1.38; const rx = s * 1.05; const ry = s * 0.8;
+    let lx = L.light[0] - cx; let ly = Math.min(L.light[1] - cy, -40);
+    const ln = Math.hypot(lx, ly) || 1; lx /= ln; ly /= ln;
+    const T = S.epoch + t;
+    const autumn = S.season === 'autumn';
+    const clumps = [];
+    const K = 95;
+    for (let k = 0; k < K; k++) {
+      const ang = R() * Math.PI * 2; const rr = Math.sqrt(R());
+      const u = Math.cos(ang) * rr; let v = Math.sin(ang) * rr;
+      if (v > 0.5) v = 0.5 + (v - 0.5) * 0.6;
+      const r = s * (0.1 + R() * 0.11) * (1 - rr * 0.25);
+      if (autumn && R() < 0.22) continue; // осенью крона реже
+      const sway = Math.sin(T * 0.9 + u * 1.8) * s * 0.03 * (0.4 + S.wind.power * 0.4) * (1 - v) * 0.5;
+      clumps.push([cx + u * rx + sway, cy + v * ry, r, u, v]);
+    }
+    // сначала теневая масса, затем каждый комок от тёмной стороны к светлой
+    P.ellipse(cx + s * 0.05, cy + s * 0.1, rx * 0.92, ry * 0.85, C.crown[0]);
+    clumps.sort((a, b) => (a[3] * lx + a[4] * ly) - (b[3] * lx + b[4] * ly));
+    for (const [x, y, r, u, v] of clumps) {
+      const f = u * lx + v * ly; // насколько комок повёрнут к свету
+      P.ellipse(x + s * 0.02, y + s * 0.03, r * 1.05, r * 0.92, A(C.crown[0], 0.6));
+      P.ellipse(x + lx * r * 0.14, y + ly * r * 0.14, r * 0.88, r * 0.78, C.crown[1]);
+      if (f > -0.35) P.ellipse(x + lx * r * 0.32, y + ly * r * 0.32, r * 0.58, r * 0.5, A(C.crown[2], clamp(0.55 + f * 0.5, 0.3, 1)));
+      if (f > 0.35) P.ellipse(x + lx * r * 0.48, y + ly * r * 0.48, r * 0.26, r * 0.22, A(C.crown[3], S.tod === 'night' ? 0.4 : 0.75));
+    }
+    // фактура листвы: сотни мелких листочков разного тона
+    const R4 = rng(S.seedStable ^ 0x5eed);
+    for (let i = 0; i < 320; i++) {
+      const ang = R4() * Math.PI * 2; const rr = Math.sqrt(R4()) * 0.95;
+      const u = Math.cos(ang) * rr; const v = Math.sin(ang) * rr;
+      const f = u * lx + v * ly;
+      const c = f > 0.25 ? C.crown[2] : f > -0.3 ? C.crown[1] : C.crown[0];
+      P.ellipse(cx + u * rx, cy + v * ry, 0.8 + R4() * 1.1, 0.6 + R4() * 0.8, A(c, 0.55));
+    }
+    // мелкие листья по контуру — рваный живой край
+    const R2 = rng(S.seedStable ^ 77);
+    for (let i = 0; i < 90; i++) {
+      const ang = R2() * Math.PI * 2; const rr = 0.85 + R2() * 0.25;
+      const x = cx + Math.cos(ang) * rx * rr + Math.sin(T * 1.3 + i) * 0.5 * S.wind.power;
+      const y = cy + Math.sin(ang) * ry * rr * 0.95;
+      const lit = Math.cos(ang) * lx + Math.sin(ang) * ly > 0.2;
+      P.ellipse(x, y, 1 + R2() * 1.2, 0.9 + R2() * 0.9, A(C.crown[lit ? 2 : 1], 0.9));
+    }
+    if (C.blossom) {
+      for (const [x, y, r] of clumps) if (R2() < 0.7) P.ellipse(x + (R2() - 0.5) * r, y + (R2() - 0.5) * r, 1.1, 1, A(R2.pick(C.blossom), 0.9));
+    }
+  }
+
+  // Старый седан (смотрит влево): кузов, стёкла, хром, колёса, задний фонарь.
+  function car(P, S, C, x, gy, len) {
+    const L2 = len;
+    P.ellipse(x + L2 * 0.5, gy + 1, L2 * 0.56, L2 * 0.05, A(BLACK, 0.4));
+    P.path([['M', x + L2 * 0.02, gy - L2 * 0.07], ['Q', x - L2 * 0.01, gy - L2 * 0.15, x + L2 * 0.05, gy - L2 * 0.2],
+      ['L', x + L2 * 0.28, gy - L2 * 0.215], ['L', x + L2 * 0.37, gy - L2 * 0.33], ['L', x + L2 * 0.66, gy - L2 * 0.335],
+      ['Q', x + L2 * 0.71, gy - L2 * 0.33, x + L2 * 0.77, gy - L2 * 0.22], ['L', x + L2 * 0.97, gy - L2 * 0.2],
+      ['Q', x + L2 * 1.01, gy - L2 * 0.15, x + L2 * 0.99, gy - L2 * 0.07], ['Z']], C.car);
+    P.poly([x + L2 * 0.385, gy - L2 * 0.22, x + L2 * 0.415, gy - L2 * 0.31, x + L2 * 0.52, gy - L2 * 0.313, x + L2 * 0.52, gy - L2 * 0.22], A(C.glass, 0.85));
+    P.poly([x + L2 * 0.545, gy - L2 * 0.22, x + L2 * 0.545, gy - L2 * 0.313, x + L2 * 0.65, gy - L2 * 0.31, x + L2 * 0.73, gy - L2 * 0.22], A(C.glass, 0.85));
+    P.strokes([x + L2 * 0.42, gy - L2 * 0.3, x + L2 * 0.5, gy - L2 * 0.305], A(C.light, 0.3), 0.7);
+    P.strokes([x + L2 * 0.04, gy - L2 * 0.145, x + L2 * 0.97, gy - L2 * 0.145, x + L2 * 0.0, gy - L2 * 0.07, x + L2 * 0.12, gy - L2 * 0.07, x + L2 * 0.9, gy - L2 * 0.07, x + L2 * 1.0, gy - L2 * 0.07], A(C.chrome, 0.45), 0.9);
+    P.strokes([x + L2 * 0.38, gy - L2 * 0.333, x + L2 * 0.65, gy - L2 * 0.338], A(C.light, 0.25), 0.8);
+    for (const wx of [0.2, 0.8]) {
+      P.ellipse(x + L2 * wx, gy - L2 * 0.065, L2 * 0.078, L2 * 0.078, C.carDark);
+      P.ellipse(x + L2 * wx, gy - L2 * 0.065, L2 * 0.035, L2 * 0.035, A(C.chrome, 0.45));
+    }
+    const red = [255, 70, 55, 1];
+    P.rect(x + L2 * 0.975, gy - L2 * 0.175, L2 * 0.02, L2 * 0.04, red);
+    if (S.tod !== 'day') P.glow(x + L2 * 0.99, gy - L2 * 0.155, L2 * 0.16, A(red, 0.45));
+  }
+
+  function fieldLand(P, S, C, L) {
+    const W = P.W; const H = P.H; const hz = L.horizon;
+    const k = Math.min(W, H) / 160;
+    const R = rng(S.seedStable ^ 0x1234);
+    hills(P, C, hz, [[0.02, 0.09, 0.36], [0.9, 0.065, 0.32], [0.5, 0.022, 0.22]]);
+    P.vgrad(0, Math.floor(hz), W, H - Math.floor(hz), [[0, C.far], [1, C.near]]);
+    // светлые «волны» ветра по траве
+    for (let i = 0; i < 9; i++) P.ellipse(R() * W, hz + (0.15 + R() * 0.8) * (H - hz), W * (0.12 + R() * 0.22), (H - hz) * (0.03 + R() * 0.06), A(C.grass[C.grass.length - 1], 0.12));
+    // фактура травы: тысячи коротких штрихов, по цвету — пачками (один вызов на цвет)
+    const bins = C.grass.map(() => []);
+    const N = Math.round((W * (H - hz)) / 9);
+    const lean = S.wind.dir * S.wind.power * 0.22;
+    for (let i = 0; i < N; i++) {
+      const d = Math.pow(R(), 0.75);
+      const y = hz + 1 + d * (H - hz);
+      const len = lerp(1.2, 7, d) * k;
+      const x = R() * W;
+      const ci = Math.min(C.grass.length - 1, Math.floor(R() * C.grass.length * (0.5 + d * 0.6)));
+      bins[ci].push(x, y, x + lean * len + (R() - 0.5) * len * 0.5, y - len);
+    }
+    bins.forEach((segs, i) => P.strokes(segs, A(C.grass[i], 0.85), 0.9));
+    // цветы на переднем плане
+    const nf = Math.round((W * (H - hz)) / 380 * C.se.flowerRate);
+    for (let i = 0; i < nf; i++) {
+      const d = 0.35 + R() * 0.65;
+      const r = (0.6 + R() * 0.9) * k * d;
+      P.ellipse(R() * W, hz + d * (H - hz), r, r, A(R.pick(C.flowers), 0.85));
+    }
+    if (S.season === 'winter') { // сугробы и следы на снегу
+      for (let i = 0; i < 9; i++) P.ellipse(R() * W, hz + R() * (H - hz), W * (0.05 + R() * 0.1), 2 * k, A(WHITE, S.tod === 'night' ? 0.08 : 0.35));
+    }
+    const { tx, gy, s } = treeBase(S, L);
+    P.ellipse(tx + s * 0.35, gy + 2, s * 0.9, s * 0.12, A(BLACK, 0.32));
+    trunk(P, C, tx, gy, s, !C.crown);
+    if (L.car) car(P, S, C, tx + s * 0.28, gy + s * 0.06, s * 1.25);
+  }
+
+  // Живой передний план: крона, светлячки, листья/снег/дождь, травинки у самого края.
+  function fieldLife(P, S, C, L, t) {
+    const W = P.W; const H = P.H; const hz = L.horizon;
+    const T = S.epoch + t;
+    const k = Math.min(W, H) / 160;
+    crown(P, S, C, L, t);
+    const R = rng(S.seedTime ^ 0xabc);
+    const { tx, gy, s } = treeBase(S, L);
+    if (S.tod !== 'day' && S.season !== 'winter') { // светлячки
+      const n = S.tod === 'night' ? 16 : 8;
+      for (let i = 0; i < n; i++) {
+        const x0 = tx + (R() - 0.5) * W * 0.8; const y0 = lerp(gy - s * 1.6, H * 0.97, R());
+        const ph = R() * 6.28;
+        const x = x0 + Math.sin(T * (0.3 + R() * 0.4) + ph) * 14 * k;
+        const y = y0 + Math.cos(T * (0.25 + R() * 0.3) + ph) * 6 * k;
+        const a = 0.35 + 0.65 * Math.max(0, Math.sin(T * (1 + R()) + ph));
+        P.glow(x, y, 5 * k, [255, 226, 120, 0.35 * a]);
+        P.ellipse(x, y, 0.9 * k, 0.9 * k, [255, 244, 190, a]);
+      }
+    }
+    if (C.leaves && (S.season !== 'summer' || S.wind.power >= 2)) { // летящие листья / лепестки
+      const n = S.season === 'autumn' ? 16 : S.season === 'spring' ? 12 : 5;
+      for (let i = 0; i < n; i++) {
+        const sp = 10 + R() * 18;
+        const x = mod(tx + R() * W + T * sp * S.wind.dir, W + 40) - 20;
+        const y = mod(gy - s * 1.6 + R() * H * 0.6 + T * (6 + R() * 6), H + 20) - 10;
+        const ang = T * (1 + R() * 2) + R() * 6;
+        const lw = (1.6 + R() * 1.4) * k; const lh = lw * 0.45;
+        const ca = Math.cos(ang); const sa = Math.sin(ang);
+        P.poly([x + ca * lw, y + sa * lw, x - sa * lh, y + ca * lh, x - ca * lw, y - sa * lw, x + sa * lh, y - ca * lh], A(R.pick(C.leaves), 0.9));
+      }
+    }
+    if (S.season === 'winter') { // снегопад
+      const n = S.trend === 'down' ? 220 : 110;
+      for (let i = 0; i < n; i++) {
+        const r = (0.5 + R() * 1.2) * k;
+        const x = mod(R() * W + Math.sin(T * 0.6 + i) * 6 + T * 8 * S.wind.dir * (0.5 + r / k), W);
+        const y = mod(R() * H + T * (10 + r * 9), H);
+        P.ellipse(x, y, r, r, A(C.snow, 0.5 + R() * 0.4));
+      }
+    } else if (S.trend === 'down') { // дождь
+      const segs = [];
+      const n = Math.round(W * H / 380);
+      const vx = S.wind.dir * (30 + S.wind.power * 25); const vy = 420;
+      for (let i = 0; i < n; i++) {
+        const x = mod(R() * W + T * vx, W); const y = mod(R() * H + T * vy, H);
+        const l = (6 + R() * 8) * k;
+        segs.push(x, y, x + vx / vy * l, y + l);
+      }
+      P.strokes(segs, [190, 210, 230, 0.28], 0.7);
+    }
+    // травинки переднего плана — изгибаются и качаются на ветру
+    const bins = C.grass.map(() => []);
+    const R3 = rng(S.seedStable ^ 0x77);
+    const n = Math.round(W / 1.6);
+    for (let i = 0; i < n; i++) {
+      const x = R3() * W; const y = H * (0.86 + R3() * 0.16);
+      const len = (7 + R3() * 13) * k;
+      const sw = Math.sin(T * 1.6 + x * 0.045) * len * 0.2 * (0.4 + S.wind.power * 0.35) + S.wind.dir * S.wind.power * len * 0.12;
+      const ci = Math.floor(R3() * C.grass.length);
+      bins[ci].push(['M', x, y], ['Q', x + sw * 0.3, y - len * 0.6, x + sw, y - len]);
+    }
+    bins.forEach((cmds, i) => { if (cmds.length) P.path(cmds, A(mix(C.grass[i], BLACK, 0.15), 0.95), 1.1); });
+  }
+
+  // =====================================================================
+  //  Панель с курсами для поля
+  // =====================================================================
+  function fieldTheme(S) {
+    return { text: [247, 241, 226, 1], sub: [247, 241, 226, 0.7], up: [142, 240, 168, 1], down: [255, 138, 128, 1], eq: [205, 214, 224, 1], line: [242, 213, 138, 1], grid: [255, 255, 255, 0.12] };
+  }
+
+  function lineChart(P, x, y, w, h, series, label, th) {
+    P.text(label, x, y, w * 0.5, 9, th.sub, { font: 'round' });
+    if (series.length < 2) { P.text('История курса копится…', x, y + h / 2 - 6, w, 9, th.sub, { font: 'round' }); return; }
+    const vals = series.map((p) => p.v);
+    const mn = Math.min(...vals); const mx = Math.max(...vals);
+    P.text(`${fmtNum(mn)}–${fmtNum(mx)}`, x, y, w, 9, th.sub, { align: 'right', bold: false });
+    const y0 = y + 15; const h0 = h - 17; const n = series.length;
+    const pts = series.map((p, i) => [x + (i * w) / (n - 1), y0 + h0 - ((p.v - mn) / ((mx - mn) || 1)) * h0 * 0.8 - h0 * 0.1]);
+    P.rect(x, y0 + h0, w, 1, th.grid);
+    P.poly([x, y0 + h0].concat(...pts).concat([x + w, y0 + h0]), A(th.line, 0.14));
+    const cmds = [['M', pts[0][0], pts[0][1]]];
+    for (let i = 1; i < n; i++) {
+      const mxp = (pts[i - 1][0] + pts[i][0]) / 2; const myp = (pts[i - 1][1] + pts[i][1]) / 2;
+      cmds.push(['Q', pts[i - 1][0], pts[i - 1][1], mxp, myp]);
+    }
+    cmds.push(['L', pts[n - 1][0], pts[n - 1][1]]);
+    P.path(cmds, A(th.line, 0.25), 4);
+    P.path(cmds, th.line, 1.7);
+    const last = pts[n - 1];
+    P.glow(last[0], last[1], 9, A(th.line, 0.6));
+    P.ellipse(last[0], last[1], 2.2, 2.2, WHITE);
+  }
+
+  function ratesContent(P, S, box, th) {
+    const m = S.model; const fam = S.family;
+    const head = `${m.amount} ${m.base} =`;
+    if (fam === 'small') {
+      const r = m.rows[0];
+      const hs = fit(head, box.w, 12, 8, 'round');
+      const vs = fit(r.value, box.w, 28, 10);
+      const cs = Math.min(14, vs);
+      const gap = Math.max(0, (box.h - hs * 1.3 - vs * 1.2 - cs * 1.3) / 2);
+      let y = box.y;
+      P.text(head, box.x, y, box.w, hs, th.sub, { font: 'round' });
+      y += hs * 1.3 + gap;
+      P.text(r.value, box.x, y, box.w, vs, th.text);
+      y += vs * 1.2 + gap;
+      P.text(r.code, box.x, y, box.w, cs, th.text, { font: 'round' });
+      arrow(P, r.trend, box.x + r.code.length * cs * 0.68 + 6, y + cs * 0.22, cs * 0.7, th);
+      P.text(m.shortDate, box.x, y + cs * 0.25, box.w, 8, th.sub, { align: 'right', bold: false });
+      return;
+    }
+    const big = fam !== 'medium';
+    const rows = m.rows;
+    const hs = fit(head, box.w, big ? 15 : 12, 8, 'round');
+    const maxChars = Math.max(...rows.map((r) => r.code.length * 0.8 + 1 + r.value.length));
+    const rsMax = fam === 'extraLarge' ? 30 : big ? 25 : 20;
+    const as0 = rsMax * 0.6;
+    const rs = Math.min(rsMax, Math.floor((box.w - as0 - 8) / (maxChars * 0.62)));
+    const as = rs * 0.6;
+    const fs = 9;
+    const chartH = big ? Math.min(box.h * 0.34, 110) : 0;
+    const used = hs * 1.3 + rows.length * rs * 1.3 + chartH + fs * 1.4;
+    const gap = Math.max(0, (box.h - used) / (rows.length + (chartH ? 2 : 1)));
+    let y = box.y;
+    P.text(head, box.x, y, box.w, hs, th.sub, { font: 'round' });
+    y += hs * 1.3 + gap * 0.6;
+    for (const r of rows) {
+      P.text(r.code, box.x, y, box.w, rs * 0.82, th.text, { font: 'round' });
+      P.text(r.value, box.x, y, box.w - as - 8, rs, th.text, { align: 'right' });
+      arrow(P, r.trend, box.x + box.w - as, y + rs * 0.3, as, th);
+      y += rs * 1.3 + gap;
+    }
+    if (chartH) lineChart(P, box.x, y, box.w, chartH, S.series, `${m.chartLabel}, 14 дн.`, th);
+    P.text(m.dateLabel, box.x, box.y + box.h - fs * 1.3, box.w, fs, th.sub, { font: 'round', bold: false });
+  }
+
+  function fieldUI(P, S, C, L) {
+    if (S.dark && S.tod === 'day') P.rect(0, 0, P.W, P.H, [0, 0, 0, 0.18]);
+    const r = L.panel;
+    P.rrect(r.x, r.y, r.w, r.h, 14, [5, 11, 20, S.tod === 'day' ? 0.4 : 0.5]);
+    P.rrect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 14, [255, 255, 255, 0.14], 1);
+    P.rect(r.x + 14, r.y + 1, r.w - 28, 1, [255, 255, 255, 0.08]);
+    const pad = S.family === 'small' ? 10 : 12;
+    ratesContent(P, S, { x: r.x + pad, y: r.y + pad - 2, w: r.w - pad * 2, h: r.h - pad * 2 + 2 }, fieldTheme(S));
+  }
+
+  function fieldLayers(S) {
+    const C = fieldPalette(S); const L = fieldLayout(S);
+    return [
+      { static: true, draw: (P) => fieldBack(P, S, C, L) },
+      { static: false, draw: (P, t) => fieldClouds(P, S, C, L, t) },
+      { static: true, draw: (P) => fieldLand(P, S, C, L) },
+      { static: false, draw: (P, t) => fieldLife(P, S, C, L, t) },
+      { static: true, draw: (P) => fieldUI(P, S, C, L) },
+    ];
+  }
+
+  // =====================================================================
+  //  СЦЕНА 2. Медицина: прикроватный монитор. Курсы — как показатели,
+  //  ЭКГ и плетизмограмма бегут развёрткой, график — тренд за 14 дней.
+  // =====================================================================
+  const MED = {
+    bg: hex('#020608'), screen: hex('#04100f'), grid: hex('#0b2a22'), grid2: hex('#124034'), frame: hex('#163a33'),
+    ecg: hex('#3dff8f'), pleth: hex('#3fd9ff'), amber: hex('#ffd34a'), red: hex('#ff4d5e'), white: hex('#e9f5f1'), dim: hex('#6f938c'),
+  };
+  const VITAL = [MED.ecg, MED.pleth, MED.amber];
+
+  // ЭКГ: сумма гауссиан — зубцы P, Q, R, S, T.
+  function ecgWave(p) {
+    p = mod(p, 1);
+    const g = (c, w) => Math.exp(-((p - c) * (p - c)) / (2 * w * w));
+    return 0.11 * g(0.16, 0.022) - 0.1 * g(0.36, 0.009) + 1.0 * g(0.39, 0.011) - 0.26 * g(0.42, 0.011) + 0.3 * g(0.66, 0.045);
+  }
+  function plethWave(p) {
+    p = mod(p, 1);
+    const g = (c, w) => Math.exp(-((p - c) * (p - c)) / (2 * w * w));
+    return 0.9 * g(0.24, 0.08) + 0.36 * g(0.5, 0.07) + 0.05;
+  }
+  function bpmOf(S) {
+    const base = { up: 72, eq: 64, down: 96 }[S.trend] || 68;
+    return base + rng(S.seedTime)() * 6;
+  }
+
+  function medLayout(S) {
+    const W = S.W; const H = S.H; const f = S.family;
+    const bar = { x: 0, y: 0, w: W, h: f === 'small' ? 22 : 24 };
+    const top = bar.h + 2;
+    if (f === 'small') {
+      const eh = H * 0.32;
+      return { bar, ecg: { x: 6, y: top, w: W - 12, h: eh }, vitals: [{ x: 6, y: top + eh + 5, w: W - 12, h: H - top - eh - 11 }] };
+    }
+    if (f === 'medium') {
+      const lw = W * 0.46; const ah = H - top - 8;
+      return { bar, ecg: { x: 6, y: top, w: lw, h: ah * 0.6 }, pleth: { x: 6, y: top + ah * 0.6 + 4, w: lw, h: ah * 0.4 - 4 },
+        vitals: [0, 1].map((i) => ({ x: lw + 14, y: top + i * (ah / 2 + 2), w: W - lw - 20, h: ah / 2 - 2 })) };
+    }
+    if (f === 'extraLarge') {
+      const lw = W * 0.5; const ah = H - top - 8;
+      return { bar, ecg: { x: 8, y: top, w: lw, h: ah * 0.36 }, pleth: { x: 8, y: top + ah * 0.36 + 5, w: lw, h: ah * 0.24 }, trend: { x: 8, y: top + ah * 0.6 + 10, w: lw, h: ah * 0.4 - 10 },
+        vitals: [0, 1, 2].map((i) => ({ x: lw + 18, y: top + i * (ah / 3 + 1), w: W - lw - 26, h: ah / 3 - 3 })) };
+    }
+    // large и live
+    const live = f === 'live';
+    const t0 = live ? Math.max(50, H * 0.06) : 0;
+    const bar2 = live ? { x: 0, y: t0 - 26, w: W, h: 24 } : bar;
+    const y0 = live ? t0 + 4 : top;
+    const ah = H - y0 - (live ? 30 : 8);
+    const eh = ah * (live ? 0.2 : 0.24); const ph = live ? ah * 0.12 : 0; const vh = ah * (live ? 0.42 : 0.47);
+    const L = { bar: bar2, ecg: { x: 8, y: y0, w: W - 16, h: eh } };
+    let y = y0 + eh + 5;
+    if (live) { L.pleth = { x: 8, y, w: W - 16, h: ph }; y += ph + 5; }
+    L.vitals = [0, 1, 2].map((i) => ({ x: 8, y: y + i * (vh / 3), w: W - 16, h: vh / 3 - 4 }));
+    y += vh + 2;
+    L.trend = { x: 8, y, w: W - 16, h: y0 + ah - y };
+    return L;
+  }
+
+  function scanlines(P) {
+    for (let y = 0; y < P.H; y += 3) P.rect(0, y, P.W, 1, [255, 255, 255, 0.018]);
+  }
+  function gridBox(P, r) {
+    P.rrect(r.x, r.y, r.w, r.h, 6, MED.screen);
+    const minor = []; const major = [];
+    for (let x = r.x + 6, i = 1; x < r.x + r.w; x += 6, i++) (i % 5 ? minor : major).push(x, r.y + 1, x, r.y + r.h - 1);
+    for (let y = r.y + 6, i = 1; y < r.y + r.h; y += 6, i++) (i % 5 ? minor : major).push(r.x + 1, y, r.x + r.w - 1, y);
+    P.strokes(minor, A(MED.grid, 0.55), 0.5);
+    P.strokes(major, A(MED.grid2, 0.9), 0.7);
+    P.rrect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 6, MED.frame, 1);
+  }
+  function redCross(P, x, y, s, c) {
+    P.rrect(x + s * 0.35, y, s * 0.3, s, s * 0.06, c);
+    P.rrect(x, y + s * 0.35, s, s * 0.3, s * 0.06, c);
+  }
+  function heart(P, x, y, s, c) {
+    P.ellipse(x - s * 0.24, y, s * 0.28, s * 0.27, c);
+    P.ellipse(x + s * 0.24, y, s * 0.28, s * 0.27, c);
+    P.poly([x - s * 0.5, y + s * 0.08, x + s * 0.5, y + s * 0.08, x, y + s * 0.62], c);
+  }
+
+  function medStatic(P, S, L) {
+    const m = S.model;
+    P.rect(0, 0, P.W, P.H, MED.bg);
+    P.glow(P.W * 0.5, P.H * 0.45, Math.max(P.W, P.H) * 0.7, A(MED.grid2, 0.25));
+    // верхняя строка монитора
+    const b = L.bar;
+    P.rect(b.x, b.y, b.w, b.h, [10, 26, 26, 1]);
+    P.rect(b.x, b.y + b.h - 1, b.w, 1, A(MED.ecg, 0.25));
+    const cs = b.h * 0.5;
+    redCross(P, b.x + 8, b.y + (b.h - cs) / 2, cs, MED.red);
+    const small = S.family === 'small';
+    P.text(`${m.amount} ${m.base}`, b.x + 14 + cs, b.y + b.h / 2 - 6.5, b.w * 0.5, small ? 10 : 11, MED.white, { font: 'round' });
+    const right = m.offline ? `ОФЛАЙН · ${m.rateDDMM}` : small ? `НБРБ ${m.rateDDMM}` : `НБРБ · ${m.rateDate} · ${S.clock}`;
+    P.text(right, b.x + b.w * 0.35, b.y + b.h / 2 - 5.5, b.w * 0.65 - 8, small ? 8.5 : 9, m.offline ? MED.amber : MED.dim, { align: 'right', bold: false });
+    // полосы с сеткой
+    for (const key of ['ecg', 'pleth', 'trend']) if (L[key]) gridBox(P, L[key]);
+    const tag = (r, label, c) => P.text(label, r.x + 6, r.y + 4, r.w * 0.7, 8.5, c, { font: 'round' });
+    tag(L.ecg, small || S.trend === 'down' && L.ecg.w < 200 ? 'ЭКГ' : `ЭКГ · ${m.chartLabel}`, MED.ecg);
+    if (L.pleth) tag(L.pleth, 'ПУЛЬС КУРСА', MED.pleth);
+    // показатели
+    L.vitals.forEach((r, i) => {
+      const row = m.rows[i];
+      if (!row) return;
+      const c = VITAL[i % 3];
+      P.rrect(r.x, r.y, r.w, r.h, 7, A(c, 0.05));
+      P.rrect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 7, A(c, 0.3), 1);
+      const ls = Math.min(13, Math.max(9, r.h * 0.2));
+      P.text(row.code, r.x + 8, r.y + 5, r.w * 0.4, ls, c, { font: 'round' });
+      const th = { up: MED.ecg, down: MED.red, eq: MED.dim };
+      const as = ls * 0.85;
+      arrow(P, row.trend, r.x + 14 + row.code.length * ls * 0.68, r.y + 5 + ls * 0.12, as, th);
+      const tall = r.h > 44;
+      const vMax = Math.min(tall ? r.h * (S.family === 'medium' ? 0.44 : 0.55) : r.h * 0.5, S.family === 'small' ? 30 : 34);
+      const vs = fit(row.value, tall && r.w < 220 ? r.w - 16 : r.w * 0.66, vMax, 10);
+      const vy = tall && r.w < 220 ? r.y + r.h - vs * 1.15 - (r.h > 58 ? 15 : 3) : r.y + (r.h - vs * 1.2) / 2 + 2;
+      P.text(row.value, r.x + 8, vy, r.w - 16, vs, c, { align: 'right' });
+      if (r.h > 34) P.text(`1 ${m.base} = ${row.rate}`, r.x + 8, r.y + r.h - 13, r.w * 0.6, 8, MED.dim, { bold: false });
+    });
+    // тренд за 14 дней
+    if (L.trend) {
+      const r = L.trend;
+      P.text(`ТРЕНД 14 ДН. · ${m.chartLabel}`, r.x + 6, r.y + 4, r.w * 0.7, 8.5, MED.amber, { font: 'round' });
+      const s = S.series;
+      if (s.length >= 2) {
+        const vals = s.map((p) => p.v); const mn = Math.min(...vals); const mx = Math.max(...vals);
+        P.text(`${fmtNum(mn)}–${fmtNum(mx)}`, r.x, r.y + 4, r.w - 6, 8.5, MED.dim, { align: 'right', bold: false });
+        const y0 = r.y + 18; const h0 = r.h - 24; const x0 = r.x + 10; const w0 = r.w - 20;
+        const pts = s.map((p, i) => [x0 + (i * w0) / (s.length - 1), y0 + h0 - ((p.v - mn) / ((mx - mn) || 1)) * h0]);
+        const cmds = pts.map((p, i) => [i ? 'L' : 'M', p[0], p[1]]);
+        P.path(cmds, A(MED.amber, 0.22), 4);
+        P.path(cmds, MED.amber, 1.4);
+        pts.forEach((p, i) => P.ellipse(p[0], p[1], i === pts.length - 1 ? 2.6 : 1.5, i === pts.length - 1 ? 2.6 : 1.5, i === pts.length - 1 ? WHITE : MED.amber));
+      } else {
+        P.text('История курса копится…', r.x + 6, r.y + r.h / 2 - 5, r.w, 9, MED.dim, { bold: false });
+      }
+    }
+    scanlines(P);
+  }
+
+  // Развёртка: кривая стоит на месте, «перо» бежит слева направо и стирает старое перед собой.
+  function sweep(P, r, T, bps, fn, color, secs) {
+    const base = r.y + r.h * 0.7; const amp = r.h * 0.5;
+    const v = r.w / secs; const sx = r.x + mod(T * v, r.w); const gap = Math.max(8, r.w * 0.05);
+    const a = []; const b = [];
+    for (let x = r.x + 2; x <= r.x + r.w - 2; x += 1.2) {
+      const back = mod(sx - x, r.w) / v;
+      if (back > (r.w - gap) / v) continue;
+      (x <= sx ? a : b).push([x, base - fn((T - back) * bps) * amp]);
+    }
+    for (const seg of [a, b]) {
+      if (seg.length < 2) continue;
+      const cmds = seg.map((p, i) => [i ? 'L' : 'M', p[0], p[1]]);
+      P.path(cmds, A(color, 0.2), 4);
+      P.path(cmds, color, 1.4);
+    }
+    const hy = base - fn(T * bps) * amp;
+    P.glow(sx, hy, 10, A(color, 0.7));
+    P.ellipse(sx, hy, 1.8, 1.8, WHITE);
+  }
+
+  function medLive(P, S, L, t) {
+    const T = S.epoch + t;
+    const bpm = bpmOf(S); const bps = bpm / 60;
+    sweep(P, L.ecg, T, bps, ecgWave, MED.ecg, 4);
+    if (L.pleth) sweep(P, L.pleth, T + 0.18, bps, plethWave, MED.pleth, 4);
+    // сердце бьётся в такт ЭКГ, рядом — «пульс»
+    const r = L.ecg;
+    const beat = Math.exp(-Math.pow(mod(T * bps, 1) - 0.39, 2) / 0.003);
+    const hs = 9 + beat * 2.5;
+    const hx = r.x + r.w - 52; const hy = r.y + 9;
+    P.glow(hx, hy + 2, 12, A(MED.red, 0.25 + beat * 0.4));
+    heart(P, hx, hy, hs, MED.red);
+    P.text(String(Math.round(bpm)), hx + 10, hy - 6, 40, 13, MED.ecg, {});
+    // тревога, если курс упал
+    if (S.trend === 'down') { // мигающая плашка тревоги в полосе ЭКГ, слева от сердца
+      const a = 0.45 + 0.55 * Math.max(0, Math.sin(T * 4));
+      const w = S.family === 'small' ? 46 : 52; const h = 15;
+      const x = hx - 18 - w; const y = r.y + 3;
+      P.rrect(x, y, w, h, 4, A(MED.red, 0.22 * a));
+      P.rrect(x + 0.5, y + 0.5, w - 1, h - 1, 4, A(MED.red, 0.6 * a), 1);
+      arrow(P, 'down', x + 5, y + 3.5, 8, { down: A(MED.red, a) });
+      P.text('КУРС', x + 15, y + 2.5, w - 18, 9, A(MED.red, a), { align: 'center', font: 'round' });
+    }
+  }
+
+  function medLayers(S) {
+    const L = medLayout(S);
+    return [
+      { static: true, draw: (P) => medStatic(P, S, L) },
+      { static: false, draw: (P, t) => medLive(P, S, L, t) },
+    ];
+  }
+
+  function layers(S) { return S.scene === 'med' ? medLayers(S) : fieldLayers(S); }
+
+  // =====================================================================
+  //  Живая анимация в WebView (только браузер)
+  // =====================================================================
+  function canvasPainter(g, W, H) {
+    const css = (c) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp(alphaOf(c), 0, 1)})`;
+    const trace = (cmds) => {
+      g.beginPath();
+      for (const c of cmds) {
+        if (c[0] === 'M') g.moveTo(c[1], c[2]);
+        else if (c[0] === 'L') g.lineTo(c[1], c[2]);
+        else if (c[0] === 'Q') g.quadraticCurveTo(c[1], c[2], c[3], c[4]);
+        else if (c[0] === 'C') g.bezierCurveTo(c[1], c[2], c[3], c[4], c[5], c[6]);
+        else if (c[0] === 'Z') g.closePath();
+      }
+    };
+    const MONO = 'ui-monospace, "SF Mono", Menlo, monospace';
+    const ROUND = 'ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif';
+    const P = {
+      W, H,
+      rect: (x, y, w, h, c) => { g.fillStyle = css(c); g.fillRect(x, y, w, h); },
+      ellipse: (cx, cy, rx, ry, c) => { if (rx <= 0 || ry <= 0) return; g.fillStyle = css(c); g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill(); },
+      poly: (pts, c) => { const cmds = []; for (let i = 0; i < pts.length; i += 2) cmds.push([i ? 'L' : 'M', pts[i], pts[i + 1]]); cmds.push(['Z']); P.path(cmds, c); },
+      path: (cmds, c, w) => { trace(cmds); if (w) { g.strokeStyle = css(c); g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); } else { g.fillStyle = css(c); g.fill(); } },
+      strokes: (segs, c, w) => { if (!segs.length) return; g.beginPath(); for (let i = 0; i < segs.length; i += 4) { g.moveTo(segs[i], segs[i + 1]); g.lineTo(segs[i + 2], segs[i + 3]); } g.strokeStyle = css(c); g.lineWidth = w; g.lineCap = 'butt'; g.stroke(); },
+      vgrad: (x, y, w, h, stops) => { const gr = g.createLinearGradient(0, y, 0, y + h); stops.forEach(([t, c]) => gr.addColorStop(clamp(t, 0, 1), css(c))); g.fillStyle = gr; g.fillRect(x, y, w, h); },
+      glow: (cx, cy, r, c) => { const a = alphaOf(c); const gr = g.createRadialGradient(cx, cy, 0, cx, cy, r); gr.addColorStop(0, css(A(c, a * 0.8))); gr.addColorStop(0.35, css(A(c, a * 0.3))); gr.addColorStop(1, css(A(c, 0))); g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill(); },
+      rrect: (x, y, w, h, r, c, sw) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); if (sw) { g.strokeStyle = css(c); g.lineWidth = sw; g.stroke(); } else { g.fillStyle = css(c); g.fill(); } },
+      text: (s, x, y, w, size, c, o) => {
+        o = o || {};
+        g.font = `${o.bold === false ? 500 : 700} ${size}px ${o.font === 'round' ? ROUND : MONO}`;
+        g.fillStyle = css(c); g.textBaseline = 'top';
+        g.textAlign = o.align || 'left';
+        g.fillText(s, o.align === 'right' ? x + w : o.align === 'center' ? x + w / 2 : x, y + size * 0.12);
+      },
+    };
+    return P;
+  }
+
+  function runLive(canvas, S0) {
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    let S; let L; let cache;
+    const setup = () => {
+      const W = window.innerWidth; const H = window.innerHeight;
+      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+      S = Object.assign({}, S0, { W, H, family: W > H * 1.25 ? 'extraLarge' : 'live' });
+      L = layers(S);
+      // статичные слои рисуем один раз в отдельные холсты — в кадре остаётся только движение
+      cache = L.map((l) => {
+        if (!l.static) return null;
+        const c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height;
+        const g = c.getContext('2d'); g.scale(dpr, dpr);
+        l.draw(canvasPainter(g, W, H), 0);
+        return c;
+      });
+    };
+    const t0 = performance.now();
+    const frame = (now) => {
+      const t = (now - t0) / 1000;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      L.forEach((l, i) => {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        if (cache[i]) ctx.drawImage(cache[i], 0, 0);
+        else { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); l.draw(canvasPainter(ctx, S.W, S.H), t); }
+      });
+      requestAnimationFrame(frame);
+    };
+    setup();
+    window.addEventListener('resize', setup);
+    requestAnimationFrame(frame);
+  }
+
+  return { layers, runLive, canvasPainter, sampleStops, hashStr, rng, mix, hex };
 }
-// Стабильный шум по координатам (форма кроны не прыгает между обновлениями).
-function noise2(x, y, salt = 0) {
-  let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(salt, 2147483647);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+
+const KIT = SceneKit();
+
+// =====================================================================
+//  Художник на DrawContext (кадр для виджета)
+// =====================================================================
+function dcPainter(W, H) {
+  const ctx = new DrawContext();
+  ctx.size = new Size(W, H);
+  ctx.opaque = true;
+  ctx.respectScreenScale = true; // рисуем в точках, iOS сама умножит на @2x/@3x
+  const cache = {};
+  const to255 = (v) => Math.max(0, Math.min(255, Math.round(v)));
+  const col = (c) => {
+    const a = c.length > 3 ? Math.max(0, Math.min(1, c[3])) : 1;
+    const key = `${to255(c[0])},${to255(c[1])},${to255(c[2])},${Math.round(a * 1000)}`;
+    if (!cache[key]) cache[key] = new Color('#' + [c[0], c[1], c[2]].map((v) => to255(v).toString(16).padStart(2, '0')).join(''), a);
+    return cache[key];
+  };
+  const pt = (x, y) => new Point(x, y);
+  const build = (cmds) => {
+    const p = new Path();
+    for (const c of cmds) {
+      if (c[0] === 'M') p.move(pt(c[1], c[2]));
+      else if (c[0] === 'L') p.addLine(pt(c[1], c[2]));
+      else if (c[0] === 'Q') p.addQuadCurve(pt(c[3], c[4]), pt(c[1], c[2]));
+      else if (c[0] === 'C') p.addCurve(pt(c[5], c[6]), pt(c[1], c[2]), pt(c[3], c[4]));
+      else if (c[0] === 'Z') p.closeSubpath();
+    }
+    return p;
+  };
+  const fillOrStroke = (c, w) => {
+    if (w) { ctx.setStrokeColor(col(c)); ctx.setLineWidth(w); ctx.strokePath(); } else { ctx.setFillColor(col(c)); ctx.fillPath(); }
+  };
+  const P = {
+    W, H,
+    rect(x, y, w, h, c) { ctx.setFillColor(col(c)); ctx.fillRect(new Rect(x, y, w, h)); },
+    ellipse(cx, cy, rx, ry, c) { if (rx <= 0 || ry <= 0) return; ctx.setFillColor(col(c)); ctx.fillEllipse(new Rect(cx - rx, cy - ry, rx * 2, ry * 2)); },
+    poly(pts, c) { const cmds = []; for (let i = 0; i < pts.length; i += 2) cmds.push([i ? 'L' : 'M', pts[i], pts[i + 1]]); cmds.push(['Z']); P.path(cmds, c); },
+    path(cmds, c, w) { if (!cmds.length) return; ctx.addPath(build(cmds)); fillOrStroke(c, w); },
+    strokes(segs, c, w) {
+      if (!segs.length) return;
+      const p = new Path();
+      for (let i = 0; i < segs.length; i += 4) { p.move(pt(segs[i], segs[i + 1])); p.addLine(pt(segs[i + 2], segs[i + 3])); }
+      ctx.addPath(p); fillOrStroke(c, w);
+    },
+    // У DrawContext нет градиентов: заливаем полосами по 1 pt (на @3x это 3 px — без швов).
+    vgrad(x, y, w, h, stops) {
+      const y0 = Math.round(y); const hh = Math.round(h);
+      for (let i = 0; i < hh; i++) { ctx.setFillColor(col(KIT.sampleStops(stops, i / Math.max(1, hh - 1)))); ctx.fillRect(new Rect(x, y0 + i, w, 1)); }
+    },
+    // Мягкое свечение: стопка полупрозрачных кругов.
+    glow(cx, cy, r, c, steps) {
+      const n = steps || 16; const a = c.length > 3 ? c[3] : 1;
+      ctx.setFillColor(col([c[0], c[1], c[2], a * (1.6 / n)]));
+      for (let i = 0; i < n; i++) { const rr = r * (1 - i / n); ctx.fillEllipse(new Rect(cx - rr, cy - rr, rr * 2, rr * 2)); }
+    },
+    rrect(x, y, w, h, r, c, sw) { const p = new Path(); p.addRoundedRect(new Rect(x, y, w, h), r, r); ctx.addPath(p); fillOrStroke(c, sw); },
+    text(s, x, y, w, size, c, o) {
+      o = o || {};
+      const bold = o.bold !== false;
+      ctx.setFont(o.font === 'round'
+        ? (bold ? Font.boldRoundedSystemFont(size) : Font.mediumRoundedSystemFont(size))
+        : (bold ? Font.boldMonospacedSystemFont(size) : Font.mediumMonospacedSystemFont(size)));
+      ctx.setTextColor(col(c));
+      if (o.align === 'right') ctx.setTextAlignedRight();
+      else if (o.align === 'center') ctx.setTextAlignedCenter();
+      else ctx.setTextAlignedLeft();
+      ctx.drawTextInRect(String(s), new Rect(x, y, w, size * 1.4));
+    },
+    image() { return ctx.getImage(); },
+  };
+  return P;
+}
+
+// =====================================================================
+//  Размер виджета в точках по модели iPhone (таблица Apple HIG).
+//  Для неизвестных экранов — пропорционально ширине.
+// =====================================================================
+const WIDGET_SIZES = { // экран: [small, medium W, medium H, large H]
+  '430x932': [170, 364, 170, 382], '428x926': [170, 364, 170, 382], '414x896': [169, 360, 169, 379],
+  '414x736': [159, 348, 157, 357], '393x852': [158, 338, 158, 354], '390x844': [158, 338, 158, 354],
+  '375x812': [155, 329, 155, 345], '360x780': [155, 329, 155, 345], '375x667': [148, 321, 148, 324], '320x568': [141, 292, 141, 311],
+};
+function widgetSize(family) {
+  let w = 390; let h = 844;
+  try { const s = Device.screenSize(); w = Math.min(s.width, s.height); h = Math.max(s.width, s.height); } catch (e) { /* по умолчанию */ }
+  let t = WIDGET_SIZES[`${Math.round(w)}x${Math.round(h)}`];
+  if (!t) { const k = Math.min(1.1, w / 390); t = [158 * k, 338 * k, 158 * k, 354 * k].map(Math.round); }
+  if (family === 'small') return [t[0], t[0]];
+  if (family === 'large') return [t[1], t[3]];
+  if (family === 'extraLarge') return [Math.round(t[1] * 2.1), t[3]];
+  return [t[1], t[2]];
 }
 
 // =====================================================================
@@ -484,7 +1340,6 @@ function seasonOf(date) {
   if (m <= 7) return 'summer';
   return 'autumn';
 }
-
 // Границы суток примерно для широты Минска/Москвы, по сезону.
 const DAY_BOUNDS = {
   winter: [7.5, 9, 15.5, 17], spring: [5.5, 7, 18.5, 20],
@@ -499,623 +1354,72 @@ function timeOfDay(date, season) {
   return 'night';
 }
 
-function makeEnv(trend, overrides = {}) {
-  const date = sceneNow();
-  const season = overrides.season || seasonOf(date);
-  const tod = overrides.tod || timeOfDay(date, season);
+function sceneState(family, W, H, cfg, data, targets, ov) {
+  ov = ov || {};
+  const model = buildModel(cfg, data, targets);
+  const now = sceneNow();
+  const season = ov.season || seasonOf(now);
+  const tod = ov.tod || timeOfDay(now, season);
   // seed меняется раз в 15 минут: дата + час + четверть часа.
-  const seed = hashStr(`${ymdLocal(date)}|${date.getHours()}|${Math.floor(date.getMinutes() / 15)}|${overrides.salt || ''}`);
-  const rng = makeRng(seed);
-  const windPower = [0, 1, 1, 2, 2, 2, 3, 3][rng.int(0, 7)];
+  const seedTime = KIT.hashStr(`${ymdLocal(now)}|${now.getHours()}|${Math.floor(now.getMinutes() / 15)}|${ov.salt || ''}`);
+  const r = KIT.rng(seedTime);
   let dark = false;
   try { dark = Device.isUsingDarkAppearance(); } catch (e) { dark = false; }
-  if (overrides.dark !== undefined) dark = overrides.dark;
+  if (ov.dark !== undefined) dark = ov.dark;
   return {
-    season, tod, rng,
-    trend: overrides.trend !== undefined ? overrides.trend : trend,
-    wind: { power: windPower, dir: rng.chance(0.75) ? 1 : -1 },
+    family, W, H, scene: cfg.scene, season, tod,
+    trend: ov.trend !== undefined ? ov.trend : model.trend,
+    wind: { power: [0, 1, 1, 2, 2, 2, 3, 3][r.int(0, 7)], dir: r.chance(0.75) ? 1 : -1 },
     dark,
+    seedStable: KIT.hashStr(`tree|${cfg.base}|${targets[0]}`),
+    seedDay: KIT.hashStr(ymdLocal(now)),
+    seedTime,
+    // «время сцены» в секундах: облака, светлячки и ЭКГ считаются от него,
+    // поэтому каждое обновление виджета — следующий кадр того же мира.
+    epoch: ov.epoch !== undefined ? ov.epoch : (now.getTime() / 1000) % 100000,
+    clock: `${pad2(now.getHours())}:${pad2(now.getMinutes())}`,
+    model: Object.assign({}, model, { chartLabel: `${cfg.base}→${targets[0]}`, rateDate: ddmmyyyy(data.rateDate), rateDDMM: ddmm(data.rateDate) }),
+    series: buildSeries(cfg, targets[0], data),
   };
 }
 
-// =====================================================================
-//  Пиксельный холст
-// =====================================================================
-const colorCache = {};
-function color(key, alpha = 1) {
-  const id = `${key}|${alpha}`;
-  if (!colorCache[id]) colorCache[id] = new Color(PAL[key] || key, alpha);
-  return colorCache[id];
-}
-const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
-
-class Pix {
-  constructor(W, H, cell) {
-    this.W = W; this.H = H; this.cell = cell;
-    const ctx = new DrawContext();
-    ctx.size = new Size(W * cell, H * cell);
-    ctx.opaque = true;
-    ctx.respectScreenScale = true; // рисуем в точках, iOS умножит на @3x — края остаются чёткими
-    this.ctx = ctx;
-    this.map = null;
-    this.current = null;
-  }
-  mapKey(k, lit) { return (!lit && this.map && this.map[k]) || k; }
-  setFill(k, alpha, lit) {
-    const key = this.mapKey(k, lit);
-    const id = `${key}|${alpha}`;
-    if (this.current !== id) { this.ctx.setFillColor(color(key, alpha)); this.current = id; }
-  }
-  // Прямоугольник в клетках. lit = не затемнять ночью (свет, небо, табличка).
-  rect(x, y, w, h, k, lit = false, alpha = 1) {
-    let x0 = Math.max(0, Math.round(x)); let y0 = Math.max(0, Math.round(y));
-    const x1 = Math.min(this.W, Math.round(x + w)); const y1 = Math.min(this.H, Math.round(y + h));
-    if (x1 <= x0 || y1 <= y0) return;
-    this.setFill(k, alpha, lit);
-    this.ctx.fillRect(new Rect(x0 * this.cell, y0 * this.cell, (x1 - x0) * this.cell, (y1 - y0) * this.cell));
-  }
-  px(x, y, k, lit = false) { this.rect(x, y, 1, 1, k, lit); }
-  line(x0, y0, x1, y1, k, lit = false) {
-    x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
-    const dx = Math.abs(x1 - x0); const dy = -Math.abs(y1 - y0);
-    const sx = x0 < x1 ? 1 : -1; const sy = y0 < y1 ? 1 : -1;
-    let err = dx + dy;
-    for (let i = 0; i < 400; i++) {
-      this.px(x0, y0, k, lit);
-      if (x0 === x1 && y0 === y1) break;
-      const e2 = 2 * err;
-      if (e2 >= dy) { err += dy; x0 += sx; }
-      if (e2 <= dx) { err += dx; y0 += sy; }
-    }
-  }
-  disc(cx, cy, r, k, lit = false) {
-    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
-      const dy = y + 0.5 - cy;
-      if (Math.abs(dy) > r) continue;
-      const half = Math.sqrt(r * r - dy * dy);
-      const xa = Math.round(cx - half); const xb = Math.round(cx + half);
-      if (xb > xa) this.rect(xa, y, xb - xa, 1, k, lit);
-    }
-  }
-  // Смесь двух цветов «сеткой Байера»: ratio 0 — только A, 1 — только B.
-  dither(x, y, w, h, kA, kB, ratio, lit = false) {
-    if (ratio <= 0) return this.rect(x, y, w, h, kA, lit);
-    if (ratio >= 1) return this.rect(x, y, w, h, kB, lit);
-    if (kA) this.rect(x, y, w, h, kA, lit);
-    const lim = ratio * 16;
-    for (let yy = y; yy < y + h; yy++) {
-      for (let xx = x; xx < x + w; xx++) {
-        if (BAYER[((yy % 4) + 4) % 4][((xx % 4) + 4) % 4] < lim) this.px(xx, yy, kB, lit);
-      }
-    }
-  }
-  overlay(k, alpha) { this.rect(0, 0, this.W, this.H, k, true, alpha); }
-  // Для текста и графиков — координаты в точках.
-  ptRect(x, y, w, h, c) { this.current = null; this.ctx.setFillColor(c); this.ctx.fillRect(new Rect(x, y, w, h)); }
-  image() { return this.ctx.getImage(); }
+function targetsFor(family, cfg) {
+  if (family === 'small') return cfg.targets.slice(0, 1);
+  if (family === 'medium') return cfg.targets.slice(0, 2);
+  return threeTargets(cfg);
 }
 
-// =====================================================================
-//  Элементы сцены
-// =====================================================================
-const SKIES = {
-  dawn: [['night', 0], ['duskPink', 0.55], ['duskOrange', 1]],
-  day: [['dayTop', 0], ['water', 0.5], ['dayBottom', 1]],
-  grey: [['water', 0], ['cloudShade', 1]],
-  dusk: [['nightDeep', 0], ['night', 0.3], ['duskPink', 0.72], ['duskOrange', 1]],
-  night: [['nightDeep', 0], ['night', 1]],
-};
-
-function drawSky(P, stops, horizon) {
-  for (let y = 0; y < horizon; y++) {
-    const t = horizon <= 1 ? 0 : y / (horizon - 1);
-    let i = 0;
-    while (i < stops.length - 2 && t > stops[i + 1][1]) i++;
-    const [a, ta] = stops[i];
-    const [b, tb] = stops[i + 1];
-    const local = tb > ta ? (t - ta) / (tb - ta) : 0;
-    // Чистые полосы цвета и узкая полоса дизеринга на стыке — как в пиксель-арте.
-    const q = local < 0.36 ? 0 : local < 0.46 ? 0.25 : local < 0.54 ? 0.5 : local < 0.64 ? 0.75 : 1;
-    P.dither(0, y, P.W, 1, a, b, q, true);
-  }
+function renderImageWidget(family, cfg, data, overrides) {
+  const [W, H] = widgetSize(family);
+  const S = sceneState(family, W, H, cfg, data, targetsFor(family, cfg), overrides);
+  const P = dcPainter(W, H);
+  for (const layer of KIT.layers(S)) layer.draw(P, 0);
+  const w = new ListWidget();
+  w.backgroundImage = P.image();
+  w.backgroundColor = new Color('#03060c');
+  w.setPadding(0, 0, 0, 0);
+  return w;
 }
 
-function drawStars(P, env, horizon, many) {
-  const n = Math.round((P.W * horizon) / (many ? 45 : 80));
-  for (let i = 0; i < n; i++) {
-    const x = env.rng.int(0, P.W - 1);
-    const y = env.rng.int(0, Math.max(0, Math.floor(horizon * 0.75)));
-    const k = env.rng.chance(0.2) ? 'gold' : 'cloud';
-    P.px(x, y, k, true);
-    if (env.rng.chance(0.12)) { // мерцающая звезда-крестик
-      P.px(x - 1, y, 'cloudShade', true); P.px(x + 1, y, 'cloudShade', true);
-      P.px(x, y - 1, 'cloudShade', true); P.px(x, y + 1, 'cloudShade', true);
-    }
-  }
+// Полноэкранная анимация: тот же SceneKit, но в WebView на canvas, 60 кадров/с.
+function buildLiveHTML(S) {
+  const json = JSON.stringify(S).replace(/</g, '\\u003c');
+  return `<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden;-webkit-user-select:none}canvas{display:block;width:100vw;height:100vh}</style>
+</head><body><canvas id="c"></canvas><script>
+${SceneKit.toString()}
+SceneKit().runLive(document.getElementById('c'), ${json});
+</script></body></html>`;
 }
 
-function drawMoon(P, x, y, r) {
-  P.dither(x - r - 2, y - r - 2, r * 2 + 5, r * 2 + 5, null, 'night', 0.25, true);
-  P.disc(x + 0.5, y + 0.5, r, 'cloud', true);
-  P.px(x - 1, y, 'cloudShade', true);
-  P.px(x + 1, y + 1, 'cloudShade', true);
-  if (r >= 3) P.px(x, y - 2, 'cloudShade', true);
-}
-
-function drawSun(P, x, y, r, low, env) {
-  if (low) { // рассвет/закат: большой оранжевый диск у горизонта
-    P.disc(x + 0.5, y + 0.5, r + 1, 'duskOrange', true);
-    P.disc(x + 0.5, y + 0.5, r - 0.5, 'gold', true);
-    return;
-  }
-  P.disc(x + 0.5, y + 0.5, r, 'gold', true);
-  const d = r + 2;
-  const long = env.rng.chance(0.5);
-  [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => {
-    P.px(x + dx * d, y + dy * d, 'gold', true);
-    if (long) P.px(x + dx * (d + 1), y + dy * (d + 1), 'gold', true);
-  });
-  [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([dx, dy]) => P.px(x + dx * (d - 1), y + dy * (d - 1), 'gold', true));
-}
-
-// Пухлое облако: несколько кругов + плоское дно с тенью.
-function drawCloud(P, x, y, w, body = 'cloud', shade = 'cloudShade', lit = false) {
-  const h = Math.max(2, Math.round(w / 4));
-  const bumps = Math.max(2, Math.round(w / 4));
-  for (let i = 0; i < bumps; i++) {
-    const cx = x + ((i + 0.5) * w) / bumps;
-    const r = (i === 0 || i === bumps - 1 ? 0.55 : 0.85) * h + noise2(x + i, y, 3) * 1.2;
-    P.disc(cx, y + h - r * 0.6, r, body, lit);
-  }
-  P.rect(x, y + h - 1, w, 1, body, lit);
-  P.rect(x + 1, y + h, w - 2, 1, shade, lit);
-}
-
-function drawRain(P, env, x0, x1, yTop, yBottom, amount) {
-  const slant = env.wind.dir * Math.min(env.wind.power, 2);
-  for (let i = 0; i < amount; i++) {
-    const x = env.rng.int(x0, x1);
-    const y = env.rng.int(yTop, yBottom - 2);
-    P.px(x, y, 'water', true);
-    P.px(x + (slant >= 2 ? env.wind.dir : 0), y + 1, 'water', true);
-  }
-}
-
-function drawSnowflakes(P, env, yMax, amount) {
-  for (let i = 0; i < amount; i++) {
-    const x = env.rng.int(0, P.W - 1);
-    const y = env.rng.int(0, yMax);
-    P.px(x, y, 'cloud', true);
-    if (env.rng.chance(0.15)) { // крупная снежинка
-      P.px(x - 1, y, 'cloud', true); P.px(x + 1, y, 'cloud', true);
-      P.px(x, y - 1, 'cloud', true); P.px(x, y + 1, 'cloud', true);
-    }
-  }
-}
-
-// Дальние холмы + поле + травинки по ветру.
-function drawField(P, env, ground) {
-  const s = env.season;
-  const phase = noise2(1, 2, 7) * 6;
-  for (let x = 0; x < P.W; x++) {
-    const hill = Math.round(1.6 + 1.4 * Math.sin(x * 0.13 + phase) + Math.sin(x * 0.31) * 0.6);
-    P.rect(x, ground - hill, 1, hill, s === 'winter' ? 'cloudShade' : 'grassDeep');
-  }
-  const base = s === 'winter' ? 'cloud' : s === 'autumn' ? 'grass' : 'grass';
-  P.rect(0, ground, P.W, P.H - ground, base);
-  if (s === 'winter') {
-    P.dither(0, ground, P.W, 1, null, 'cloudShade', 0.5);
-  } else {
-    P.rect(0, ground, P.W, 1, 'grassDark');
-  }
-  // Пятна текстуры на земле.
-  for (let i = 0; i < (P.W * (P.H - ground)) / (s === 'winter' ? 25 : 6); i++) {
-    const x = env.rng.int(0, P.W - 1); const y = env.rng.int(ground + 1, P.H - 1);
-    const k = s === 'winter' ? 'cloudShade' : s === 'autumn' ? env.rng.pick(['grassDark', 'gold', 'grassLight']) : env.rng.pick(['grassDark', 'grassLight']);
-    P.px(x, y, k);
-  }
-  // Травинки: 1–3 пикселя, наклон по ветру растёт к верхушке.
-  const lean = env.wind.power * env.wind.dir;
-  const density = s === 'winter' ? 0.12 : 0.55;
-  for (let y = ground; y < P.H; y += 2) {
-    const near = (y - ground) / Math.max(1, P.H - ground); // ближе к зрителю — выше травинки
-    for (let x = 0; x < P.W; x++) {
-      if (!env.rng.chance(density)) continue;
-      const h = 1 + Math.floor(env.rng.next() * (2 + near * 1.5));
-      let top = null;
-      for (let j = 1; j <= h; j++) {
-        const dx = Math.round((lean * j * j) / 9);
-        const k = j === h ? (s === 'autumn' ? env.rng.pick(['gold', 'grassLight']) : s === 'winter' ? 'grassDark' : 'grassLight') : (s === 'winter' ? 'trunk' : 'grassDark');
-        P.px(x + dx, y - j, k);
-        top = [x + dx, y - j];
-      }
-      // Весной — цветы на верхушках.
-      if (s === 'spring' && top && env.rng.chance(0.12)) P.px(top[0], top[1], env.rng.pick(['red', 'gold', 'cloud']));
-      if (s === 'summer' && top && env.rng.chance(0.03)) P.px(top[0], top[1], 'gold');
-    }
-  }
-  if (s === 'winter') { // сугробы
-    for (let i = 0; i < P.W / 8; i++) {
-      const x = env.rng.int(0, P.W - 1);
-      P.rect(x, ground - 1, env.rng.int(2, 5), 1, 'cloud');
-    }
-  }
-}
-
-// Дерево. Возвращает центр кроны (для листьев).
-function drawTree(P, env, t, ground) {
-  const s = env.season;
-  const tx = t.x;
-  const top = ground - t.trunkH;
-  const sway = Math.round(env.wind.power * env.wind.dir * 0.5);
-  // Ствол 2 пикселя + корни.
-  P.rect(tx, top, 2, t.trunkH, 'trunk');
-  P.rect(tx + 1, top, 1, t.trunkH, 'trunkDark');
-  P.px(tx - 1, ground - 1, 'trunk'); P.px(tx + 2, ground - 1, 'trunkDark');
-  const cx = tx + 1 + sway;
-  const cy = top - t.ry * 0.55;
-
-  if (s === 'winter') {
-    // Голые ветки со снегом.
-    const branches = [[-1, -0.9, 0.9], [1, -0.85, 0.95], [-0.6, -1, 0.6], [0.6, -1.05, 0.65], [0, -1.15, 0.8]];
-    for (const [bx, by, len] of branches) {
-      const x1 = cx + bx * t.rx * len; const y1 = top + by * t.ry * 1.2 * len;
-      P.line(tx + (bx > 0 ? 1 : 0), top + 1, x1, y1, 'trunkDark');
-      P.line(x1, y1, x1 + bx * 2, y1 - 1, 'trunkDark');
-      P.px(x1, y1 - 1, 'cloud'); P.px(x1 + bx * 2, y1 - 2, 'cloud');
-    }
-    P.rect(tx, top - 1, 2, 1, 'cloud');
-    return { cx, cy };
-  }
-
-  const palette = {
-    spring: ['grassLight', 'grass', 'grassDark'],
-    summer: ['grassLight', 'grass', 'grassDark'],
-    autumn: ['gold', 'leafOrange', 'red'],
-  }[s];
-  // Ветки рисуем до кроны — из-под листвы видны только их кончики.
-  P.line(tx, top, cx - t.rx * 0.6, cy + t.ry * 0.3, 'trunkDark');
-  P.line(tx + 1, top, cx + t.rx * 0.55, cy + t.ry * 0.2, 'trunkDark');
-  const holes = s === 'autumn' ? 0.42 : 0.28;
-  for (let y = Math.floor(cy - t.ry - 1); y <= Math.ceil(cy + t.ry + 1); y++) {
-    for (let x = Math.floor(cx - t.rx - 2); x <= Math.ceil(cx + t.rx + 2); x++) {
-      // Верх кроны клонится по ветру.
-      const lean = ((cy - y) / t.ry) * env.wind.power * env.wind.dir * 0.4;
-      const dx = (x + 0.5 - cx - lean) / t.rx;
-      const dy = (y + 0.5 - cy) / t.ry;
-      const n = noise2(x >> 1, y >> 1, 11) * holes; // «комки» листвы 2×2
-      const d = dx * dx + dy * dy + n;
-      if (d > 1) continue;
-      const light = -dx * 0.6 - dy * 0.8;
-      const k = light > 0.35 ? palette[0] : (d > 0.7 && light < -0.1 ? palette[2] : palette[1]);
-      P.px(x, y, k);
-      if (s === 'spring' && noise2(x, y, 5) < 0.07) P.px(x, y, noise2(x, y, 6) < 0.5 ? 'red' : 'cloud');
-    }
-  }
-  return { cx, cy };
-}
-
-// Листья (лепестки, снежинки) срываются с кроны и летят по ветру.
-function drawFlyingLeaves(P, env, crown, ground, avoid) {
-  const s = env.season;
-  if (s === 'winter') return;
-  const n = { autumn: 5 + env.wind.power * 4, summer: env.wind.power * 2, spring: 2 + env.wind.power * 2 }[s];
-  const colors = { autumn: ['gold', 'leafOrange', 'red'], summer: ['grassLight', 'grass'], spring: ['cloud', 'red', 'cloud'] }[s];
-  for (let i = 0; i < n; i++) {
-    const dist = env.rng.next() * P.W * (0.25 + env.wind.power * 0.2);
-    const x = Math.round(crown.cx + env.wind.dir * dist + env.rng.int(-2, 2));
-    const y = Math.round(crown.cy - 2 + env.rng.next() * (ground - crown.cy) + Math.sin(dist * 0.5) * 2);
-    if (avoid && x >= avoid.x - 1 && x <= avoid.x + avoid.w && y >= avoid.y - 1 && y <= avoid.y + avoid.h) continue;
-    const k = env.rng.pick(colors);
-    P.px(x, y, k);
-    const shape = env.rng.int(0, 2); // одиночный, горизонтальный, диагональный
-    if (shape === 1) P.px(x + 1, y, k);
-    if (shape === 2) P.px(x + env.wind.dir, y - 1, k);
-  }
-}
-
-// =====================================================================
-//  Таблички под текст
-// =====================================================================
-function drawSign(P, env, r, ground) {
-  const night = env.tod === 'night' || env.tod === 'dusk';
-  // Столбики до земли.
-  const posts = [r.x + 3, r.x + r.w - 5];
-  for (const px of posts) {
-    P.rect(px, r.y + r.h, 2, ground - (r.y + r.h) + 1, 'trunk');
-    P.rect(px + 1, r.y + r.h, 1, ground - (r.y + r.h) + 1, 'trunkDark');
-  }
-  if (night) { // тёплые блики на траве под табличкой, гуще у центра
-    const mid = r.x + r.w / 2;
-    for (let y = ground - 1; y < Math.min(P.H, ground + 3); y++) {
-      for (let x = r.x - 2; x < r.x + r.w + 2; x++) {
-        const k = 1 - Math.abs(x - mid) / (r.w / 2 + 2);
-        if (noise2(x, y, 21) < 0.35 * k) P.px(x, y, noise2(x, y, 22) < 0.5 ? 'duskOrange' : 'gold', true);
-      }
-    }
-  }
-  P.rect(r.x, r.y, r.w, r.h, 'trunk', true);
-  P.rect(r.x + 1, r.y + 1, r.w - 2, r.h - 2, 'wood', true);
-  P.rect(r.x + 1, r.y + r.h - 2, r.w - 2, 1, 'duskOrange', true); // нижняя тень доски
-  P.px(r.x + 1, r.y + 1, 'trunkDark', true); // гвозди
-  P.px(r.x + r.w - 2, r.y + 1, 'trunkDark', true);
-  if (night) { // фонарик над левым углом и ореол вокруг него
-    const lx = r.x + 2; const ly = r.y - 2;
-    P.dither(lx - 2, Math.max(0, ly - 3), 7, 5, null, 'duskOrange', 0.25, true);
-    P.px(lx + 1, ly - 1, 'trunkDark', true);
-    P.rect(lx, ly, 3, 2, 'trunkDark', true);
-    P.px(lx + 1, ly, 'gold', true);
-    P.px(lx + 1, ly + 1, 'gold', true);
-  }
-  if (env.season === 'winter') { // снег на табличке
-    for (let x = r.x; x < r.x + r.w; x++) if (noise2(x, r.y, 9) < 0.7) P.px(x, r.y - 1, 'cloud');
-  }
-}
-
-function drawCloudPlate(P, env, r) {
-  const body = 'cloud'; const shade = 'cloudShade';
-  const lit = true;
-  // Кочки сверху и по бокам — получается облако.
-  const n = Math.max(3, Math.round(r.w / 7));
-  for (let i = 0; i < n; i++) {
-    const cx = r.x + 2 + ((i + 0.5) * (r.w - 4)) / n;
-    const rad = 2.2 + noise2(i, r.w, 4) * 1.8;
-    P.disc(cx, r.y + 1.5, rad, body, lit);
-  }
-  P.disc(r.x + 1.5, r.y + r.h * 0.5, Math.min(3, r.h * 0.35), body, lit);
-  P.disc(r.x + r.w - 1.5, r.y + r.h * 0.5, Math.min(3, r.h * 0.35), body, lit);
-  P.rect(r.x + 1, r.y, r.w - 2, r.h, body, lit);
-  P.rect(r.x, r.y + 1, r.w, r.h - 2, body, lit);
-  P.rect(r.x + 2, r.y + r.h, r.w - 4, 1, shade, lit);
-  P.rect(r.x + 1, r.y + r.h - 1, 1, 1, shade, lit);
-  P.rect(r.x + r.w - 2, r.y + r.h - 1, 1, 1, shade, lit);
-}
-
-function drawGlassPlate(P, r) {
-  P.rect(r.x, r.y, r.w, r.h, 'ink', true, 0.84);
-  P.rect(r.x + 1, r.y, r.w - 2, 1, 'night', true);
-  P.rect(r.x + 1, r.y + r.h - 1, r.w - 2, 1, 'night', true);
-  P.rect(r.x, r.y + 1, 1, r.h - 2, 'night', true);
-  P.rect(r.x + r.w - 1, r.y + 1, 1, r.h - 2, 'night', true);
-}
-
-// =====================================================================
-//  Сцены
-// =====================================================================
-// Раскладка в клетках по размеру виджета: W×H сетка, линия земли, дерево, табличка.
-function layoutFor(family) {
-  switch (family) {
-    case 'small':
-      return { W: 32, H: 32, ground: 25, tree: { x: 3, trunkH: 7, rx: 4.5, ry: 4 }, plate: { x: 10, y: 2, w: 21, h: 20 }, sun: [4, 3] };
-    case 'large':
-      return { W: 68, H: 71, ground: 55, tree: { x: 10, trunkH: 16, rx: 9, ry: 8 }, plate: { x: 25, y: 3, w: 41, h: 47 }, sun: [6, 6] };
-    case 'extraLarge':
-      return { W: 144, H: 68, ground: 52, tree: { x: 20, trunkH: 16, rx: 13, ry: 10 }, plate: { x: 46, y: 4, w: 92, h: 43 }, sun: [6, 6] };
-    case 'medium':
-    default:
-      return { W: 68, H: 32, ground: 24, tree: { x: 11, trunkH: 7, rx: 8, ry: 6 }, plate: { x: 27, y: 2, w: 39, h: 19 }, sun: [4, 3] };
-  }
-}
-
-function weatherSky(env) {
-  if (env.tod === 'day' && env.trend !== 'up' && env.trend !== null) return SKIES.grey;
-  return SKIES[env.tod];
-}
-
-function renderFieldScene(P, L, env, variant) {
-  const ground = L.ground;
-  drawSky(P, weatherSky(env), ground);
-  const night = env.tod === 'night';
-  if (night) drawStars(P, env, ground, env.trend === 'up');
-  // Небесное светило.
-  if (night) drawMoon(P, L.sun[0] + 1, L.sun[1], 2);
-  else if (env.trend === 'up' || env.trend === null) {
-    if (env.tod === 'day') drawSun(P, L.sun[0], L.sun[1], 2, false, env);
-    else drawSun(P, Math.round(L.W * 0.08), ground - 3, 3, true, env);
-  }
-  // Облака по тренду: = облачно, ▲ одно маленькое, ▼ тучка с дождём.
-  const plate = L.plate;
-  const freeClouds = env.trend === 'eq' ? 3 : env.trend === 'up' ? 1 : 1;
-  for (let i = 0; i < freeClouds; i++) {
-    const w = env.rng.int(6, 10);
-    const x = env.rng.int(-2, L.W - w + 2);
-    const y = env.rng.int(0, Math.max(1, Math.round(ground * 0.3)));
-    drawCloud(P, x, y, w);
-  }
-  if (night) P.map = NIGHT_MAP; else if (env.tod !== 'day') P.map = DUSK_MAP;
-  drawField(P, env, ground);
-  const crown = drawTree(P, env, L.tree, ground);
-  // Дождь или снегопад (зимой вместо дождя — снег).
-  if (env.trend === 'down') {
-    // Серая тучка над деревом, из неё — дождь.
-    const cw = Math.min(14, Math.round(L.W / 3));
-    const cx = Math.max(0, Math.round(crown.cx - cw / 2));
-    const cy = Math.max(0, Math.round(crown.cy - L.tree.ry - 6));
-    drawCloud(P, cx, cy, cw, 'cloudShade', 'night');
-    if (env.season === 'winter') drawSnowflakes(P, env, ground, Math.round(L.W * L.H / 50));
-    else drawRain(P, env, cx, cx + cw, cy + 4, ground, Math.round(cw * 1.6));
-  } else if (env.season === 'winter') {
-    drawSnowflakes(P, env, ground, Math.round(L.W * L.H / 110));
-  }
-  if (variant === 'sign') {
-    drawFlyingLeaves(P, env, crown, ground, plate);
-    P.map = null;
-    if (env.dark) P.overlay('ink', 0.22);
-    drawSign(P, env, plate, ground);
-  } else {
-    drawFlyingLeaves(P, env, crown, ground, plate);
-    P.map = null;
-    if (env.dark) P.overlay('ink', 0.22);
-    drawCloudPlate(P, env, plate);
-  }
-}
-
-function renderCityScene(P, L, env) {
-  const ground = L.H - Math.max(3, Math.round(L.H * 0.1));
-  drawSky(P, SKIES.night, ground);
-  drawStars(P, env, ground, env.trend === 'up');
-  drawMoon(P, Math.min(L.sun[0] + 1, L.plate.x - 4), L.sun[1] + 1, L.H > 40 ? 3 : 2);
-  if (env.trend === 'eq') for (let i = 0; i < 3; i++) drawCloud(P, env.rng.int(0, L.W - 10), env.rng.int(1, 8), env.rng.int(7, 11), 'cloudShade', 'night', true);
-  // Силуэты домов.
-  const plate = L.plate;
-  let x = -1;
-  while (x < L.W) {
-    const w = env.rng.int(4, 9);
-    const h = env.rng.int(Math.round(L.H * 0.22), Math.round(L.H * 0.48));
-    const top = ground - h;
-    const k = env.rng.pick(['nightDeep', 'ink', 'night']);
-    P.rect(x, top, w, h, k, true);
-    if (env.rng.chance(0.25)) { // антенна с красным огоньком
-      const ax = x + Math.floor(w / 2);
-      P.rect(ax, top - 3, 1, 3, 'ink', true);
-      P.px(ax, top - 4, 'red', true);
-    }
-    if (env.season === 'winter') P.rect(x, top - 1, w, 1, 'cloud', true);
-    for (let wy = top + 2; wy < ground - 1; wy += 2) {
-      for (let wx = x + 1; wx < x + w - 1; wx += 2) {
-        const r = env.rng.next();
-        if (r < 0.35) P.px(wx, wy, 'gold', true);
-        else if (r < 0.45) P.px(wx, wy, 'duskOrange', true);
-        else if (r < 0.5) P.px(wx, wy, 'water', true);
-      }
-    }
-    x += w + (env.rng.chance(0.3) ? 1 : 0);
-  }
-  // Дорога с разметкой.
-  P.rect(0, ground, L.W, L.H - ground, 'ink', true);
-  P.rect(0, ground, L.W, 1, 'night', true);
-  for (let rx = 1; rx < L.W; rx += 6) P.rect(rx, ground + Math.floor((L.H - ground) / 2), 3, 1, 'gold', true);
-  if (env.trend === 'down') {
-    if (env.season === 'winter') drawSnowflakes(P, env, ground, Math.round(L.W * L.H / 45));
-    else drawRain(P, env, 0, L.W - 1, 0, ground, Math.round(L.W * L.H / 40));
-  } else if (env.season === 'winter') {
-    drawSnowflakes(P, env, ground, Math.round(L.W * L.H / 110));
-  }
-  drawGlassPlate(P, plate);
-}
-
-// =====================================================================
-//  Текст на табличке
-// =====================================================================
-function themeFor(scene) {
-  if (scene === 'city') {
-    return { text: color('cloud'), sub: color('cloud', 0.72), up: 'grassLight', down: 'red', eq: 'cloudShade', bar: 'cloudShade', hi: 'gold' };
-  }
-  return { text: color('ink'), sub: color('ink', 0.65), up: 'grassDark', down: 'red', eq: 'trunk', bar: scene === 'cloud' ? 'cloudShade' : 'trunk', hi: scene === 'cloud' ? 'water' : 'leafOrange' };
-}
-
-function fitSize(chars, widthPt, max, min = 7) {
-  return Math.max(min, Math.min(max, Math.floor(widthPt / (Math.max(1, chars) * CHAR_W))));
-}
-
-function drawText(P, s, x, y, w, size, col, align = 'left', medium = false) {
-  const c = P.ctx;
-  c.setFont(medium ? Font.mediumMonospacedSystemFont(size) : Font.boldMonospacedSystemFont(size));
-  c.setTextColor(col);
-  if (align === 'right') c.setTextAlignedRight();
-  else if (align === 'center') c.setTextAlignedCenter();
-  else c.setTextAlignedLeft();
-  c.drawTextInRect(s, new Rect(x, y, w, size * 1.35));
-}
-
-// Пиксельная стрелка тренда (рисуем сами — не зависим от глифов ▲▼ в шрифте).
-const ARROWS = {
-  up: ['..#..', '.###.', '#####'],
-  down: ['#####', '.###.', '..#..'],
-  eq: ['#####', '.....', '#####'],
-};
-function drawArrow(P, trend, x, y, unit, theme) {
-  const shape = ARROWS[trend];
-  if (!shape) return;
-  const c = color(theme[trend]);
-  shape.forEach((row, ry) => {
-    for (let rx = 0; rx < row.length; rx++) if (row[rx] === '#') P.ptRect(x + rx * unit, y + ry * unit, unit, unit, c);
-  });
-}
-
-// Внутренняя область таблички в точках: отступаем от рамки и нижней тени доски.
-function plateInnerPt(r, scene) {
-  const side = scene === 'cloud' ? 1 : 1.6;
-  return { x: (r.x + side) * CELL, y: (r.y + 1) * CELL + 2, w: (r.w - side * 2) * CELL, h: (r.h - 3) * CELL - 2 };
-}
-
-// Небольшой виджет: одна пара.
-function drawSmallContent(P, box, model, theme) {
-  const row = model.rows[0];
-  const head = `${model.amount} ${model.base} =`;
-  const hs = fitSize(head.length, box.w, 13);
-  const vs = fitSize(row.value.length, box.w, 28);
-  const cs = Math.min(18, vs);
-  const fs = 9;
-  const unit = Math.max(2, Math.round(cs / 6));
-  const total = hs * 1.3 + vs * 1.25 + cs * 1.3 + fs * 1.3;
-  const gap = Math.max(0, (box.h - total) / 3);
-  let y = box.y;
-  drawText(P, head, box.x, y, box.w, hs, theme.sub);
-  y += hs * 1.3 + gap;
-  drawText(P, row.value, box.x, y, box.w, vs, theme.text);
-  y += vs * 1.25 + gap;
-  drawText(P, row.code, box.x, y, box.w, cs, theme.text);
-  drawArrow(P, row.trend, box.x + row.code.length * cs * CHAR_W + unit * 2, y + cs * 0.35, unit, theme);
-  y += cs * 1.3 + gap;
-  drawText(P, model.shortDate, box.x, y, box.w, fs, theme.sub, 'left', true);
-}
-
-// Средний и большой: строки «RUB   3 012.45 ▲».
-function drawRowsContent(P, box, model, theme, opts) {
-  const rows = model.rows;
-  const head = `${model.amount} ${model.base} =`;
-  const hs = fitSize(head.length, box.w, opts.headMax);
-  const arrowW = Math.max(2, Math.round(opts.rowMax / 6)) * 7; // стрелка 5 «пикселей» + зазор
-  const maxChars = Math.max(...rows.map((r) => r.code.length + 1 + r.value.length));
-  const rs = fitSize(maxChars, box.w - arrowW, opts.rowMax, 9);
-  const fs = opts.footSize;
-  const chartH = opts.chartH || 0;
-  const total = hs * 1.3 + rows.length * rs * 1.3 + chartH + fs * 1.3;
-  const gap = Math.max(0, (box.h - total) / (rows.length + (chartH ? 2 : 1)));
-  let y = box.y;
-  drawText(P, head, box.x, y, box.w, hs, theme.sub);
-  y += hs * 1.3 + gap * 0.6;
-  const unit = Math.max(2, Math.round(rs / 6));
-  for (const r of rows) {
-    drawText(P, r.code, box.x, y, box.w, rs, theme.text);
-    drawText(P, r.value, box.x, y, box.w - arrowW, rs, theme.text, 'right');
-    drawArrow(P, r.trend, box.x + box.w - unit * 5, y + rs * 0.38, unit, theme);
-    y += rs * 1.3 + gap;
-  }
-  if (chartH) {
-    opts.drawChart(box.x, y, box.w, chartH);
-    y += chartH + gap * 0.5;
-  }
-  drawText(P, model.dateLabel, box.x, box.y + box.h - fs * 1.3, box.w, fs, theme.sub, 'left', true);
-}
-
-// Мини-график: столбики за 14 дней, сегодняшний подсвечен.
-function drawChart(P, x, y, w, h, series, label, theme) {
-  const ls = 9;
-  if (series.length < 2) {
-    drawText(P, 'История курса копится…', x, y + h / 2 - ls, w, ls, theme.sub, 'left', true);
-    return;
-  }
-  const vals = series.map((p) => p.v);
-  const min = Math.min(...vals); const max = Math.max(...vals);
-  const fmt = (v) => (v >= 100 ? v.toFixed(2) : v >= 0.01 ? v.toFixed(4) : v.toPrecision(5));
-  drawText(P, `${label}  ${fmt(min)}–${fmt(max)}`, x, y, w, ls, theme.sub, 'left', true);
-  const top = y + ls * 1.5;
-  const u = CELL / 2; // пиксель графика — половина клетки сцены
-  const rows = Math.floor((h - ls * 1.5) / u) - 1;
-  const n = series.length;
-  const totalUnits = Math.floor(w / u);
-  const barW = Math.max(1, Math.floor((totalUnits - (n - 1)) / n));
-  const x0 = x + (w - (n * barW + (n - 1)) * u) / 2;
-  const barCol = color(theme.bar); const hiCol = color(theme.hi); const baseCol = theme.sub;
-  series.forEach((p, i) => {
-    const hh = max === min ? Math.round(rows / 2) : 2 + Math.round(((p.v - min) / (max - min)) * (rows - 2));
-    const bx = x0 + i * (barW + 1) * u;
-    const by = top + (rows - hh) * u;
-    P.ptRect(bx, by, barW * u, hh * u, i === n - 1 ? hiCol : barCol);
-  });
-  P.ptRect(x0, top + rows * u, (n * barW + (n - 1)) * u, u, baseCol);
+async function presentLive(cfg, overrides) {
+  let data;
+  try { data = await loadData(); } catch (e) { await info('Нет курсов', e.message || String(e)); return; }
+  const S = sceneState('live', 390, 844, cfg, data, threeTargets(cfg), overrides);
+  const wv = new WebView();
+  await wv.loadHTML(buildLiveHTML(S));
+  await wv.present(true);
 }
 
 // =====================================================================
@@ -1127,39 +1431,6 @@ function scriptUrl(cfg) {
   } catch (e) {
     return null;
   }
-}
-
-function renderImageWidget(family, cfg, data, overrides) {
-  const L = layoutFor(family);
-  const targets = family === 'small' ? cfg.targets.slice(0, 1)
-    : family === 'medium' ? cfg.targets.slice(0, 2)
-      : threeTargets(cfg);
-  const model = buildModel(cfg, data, targets);
-  const env = makeEnv(model.trend, overrides);
-  const scene = cfg.scene;
-  const P = new Pix(L.W, L.H, CELL);
-  if (scene === 'city') renderCityScene(P, L, env);
-  else renderFieldScene(P, L, env, scene === 'cloud' ? 'cloud' : 'sign');
-
-  const theme = themeFor(scene);
-  const box = plateInnerPt(L.plate, scene);
-  if (family === 'small') {
-    drawSmallContent(P, box, model, theme);
-  } else if (family === 'medium') {
-    drawRowsContent(P, box, model, theme, { headMax: 13, rowMax: 21, footSize: 9 });
-  } else {
-    const series = buildSeries(cfg, targets[0], data);
-    const xl = family === 'extraLarge';
-    drawRowsContent(P, box, model, theme, {
-      headMax: xl ? 18 : 15, rowMax: xl ? 30 : 24, footSize: 10, chartH: xl ? 64 : 80,
-      drawChart: (x, y, w, h) => drawChart(P, x, y, w, h, series, `${cfg.base}→${targets[0]}, 14 дн.`, theme),
-    });
-  }
-  const w = new ListWidget();
-  w.backgroundImage = P.image();
-  w.backgroundColor = color('nightDeep');
-  w.setPadding(0, 0, 0, 0);
-  return w;
 }
 
 const ARROW_CHAR = { up: '▲', down: '▼', eq: '=' };
@@ -1200,18 +1471,18 @@ function errorWidget(family, err) {
     return w;
   }
   const g = new LinearGradient();
-  g.colors = [color('nightDeep'), color('night')];
+  g.colors = [new Color('#04070f'), new Color('#122a3a')];
   g.locations = [0, 1];
   w.backgroundGradient = g;
   w.setPadding(12, 12, 12, 12);
   const title = w.addText('Курсы НБРБ');
-  title.font = Font.boldMonospacedSystemFont(13); title.textColor = color('gold');
+  title.font = Font.boldRoundedSystemFont(13); title.textColor = new Color('#f2d58a');
   w.addSpacer(6);
   const body = w.addText(text);
-  body.font = Font.systemFont(12); body.textColor = color('cloud'); body.minimumScaleFactor = 0.6;
+  body.font = Font.systemFont(12); body.textColor = new Color('#f4f1e8'); body.minimumScaleFactor = 0.6;
   w.addSpacer();
   const hint = w.addText('Нажмите, чтобы открыть');
-  hint.font = Font.systemFont(9); hint.textColor = color('cloudShade');
+  hint.font = Font.systemFont(9); hint.textColor = new Color('#9fb0c0');
   return w;
 }
 
@@ -1279,7 +1550,7 @@ async function wizard(current) {
   if (ai < 0) return null;
 
   const sceneKeys = Object.keys(SCENES);
-  const si = await choose('Шаг 4 из 4', 'Какую картинку нарисовать?', sceneKeys.map((k) => SCENES[k]));
+  const si = await choose('Шаг 4 из 4', 'Какой виджет нарисовать?', sceneKeys.map((k) => SCENES[k]));
   if (si < 0) return null;
 
   const settings = { base, targets, amount: amounts[ai], scene: sceneKeys[si] };
@@ -1337,6 +1608,7 @@ async function converter(cfg) {
       res.addAction('Скопировать');
       res.addAction(`Поменять направление (${targets[0]} → ${base})`);
       res.addAction('Другая сумма');
+      res.addAction('✨ Живая сцена');
       res.addCancelAction('Готово');
       const i = await res.presentAlert();
       copied = false;
@@ -1352,6 +1624,7 @@ async function converter(cfg) {
         base = newBase;
         continue;
       }
+      if (i === 3) { await presentLive(Object.assign({}, cfg, { base, targets })); continue; }
       break; // «Другая сумма»
     }
   }
@@ -1393,7 +1666,7 @@ async function sceneTest(cfg) {
   const ti = await choose('Время суток', null, ['Рассвет', 'День', 'Закат', 'Ночь']);
   if (ti < 0) return;
   const trends = ['up', 'down', 'eq'];
-  const ri = await choose('Курс', null, ['▲ вырос — солнце', '▼ упал — дождь', '= не изменился — облачно']);
+  const ri = await choose('Курс', null, ['▲ вырос — ясно', '▼ упал — дождь / тревога', '= не изменился — облачно']);
   if (ri < 0) return;
   const sceneKeys = Object.keys(SCENES);
   const ci = await choose('Сцена', null, sceneKeys.map((k) => SCENES[k]));
@@ -1402,20 +1675,24 @@ async function sceneTest(cfg) {
   if (di < 0) return;
   const overrides = { season: seasons[si], tod: tods[ti], trend: trends[ri], salt: String(Date.now()) };
   if (di > 0) overrides.dark = di === 2;
-  await previewWidget(Object.assign({}, cfg, { scene: sceneKeys[ci] }), overrides);
+  const c2 = Object.assign({}, cfg, { scene: sceneKeys[ci] });
+  const how = await choose('Как показать?', null, ['Виджет', '✨ Живая анимация']);
+  if (how === 0) await previewWidget(c2, overrides);
+  if (how === 1) await presentLive(c2, overrides);
 }
 
 async function menu(settings) {
   for (;;) {
     const cfg = resolveConfig('', settings);
     const i = await choose(`Курсы НБРБ · v${VERSION}`, `${fmtAmount(cfg.amountMinor)} ${cfg.base} → ${cfg.targets.join(', ')}`,
-      ['Конвертер', 'Настройки', 'Посмотреть виджет', 'Тест сцен (сезон, время)', 'Обновить курсы'], 'Закрыть');
+      ['Конвертер', '✨ Живая сцена', 'Настройки', 'Посмотреть виджет', 'Тест сцен (сезон, время)', 'Обновить курсы'], 'Закрыть');
     if (i < 0) return;
     if (i === 0) await converter(cfg);
-    if (i === 1) { const s = await wizard(settings); if (s) { settings = s; await previewWidget(resolveConfig('', s)); } }
-    if (i === 2) await previewWidget(cfg);
-    if (i === 3) await sceneTest(cfg);
-    if (i === 4) {
+    if (i === 1) await presentLive(cfg);
+    if (i === 2) { const s = await wizard(settings); if (s) { settings = s; await previewWidget(resolveConfig('', s)); } }
+    if (i === 3) await previewWidget(cfg);
+    if (i === 4) await sceneTest(cfg);
+    if (i === 5) {
       try {
         const d = await loadData(true);
         await info(d.offline ? 'Нет связи' : 'Курсы обновлены', d.offline ? `Показываю сохранённый курс от ${ddmmyyyy(d.rateDate)}.\n${d.netError || ''}` : `Курс НБРБ на ${ddmmyyyy(d.rateDate)}.`);
@@ -1463,7 +1740,7 @@ async function main() {
 if (typeof globalThis.__PIXELFX_TEST__ === 'object' && globalThis.__PIXELFX_TEST__) {
   globalThis.__PIXELFX_TEST__.exports = {
     renderImageWidget, renderAccessory, buildWidget, loadData, resolveConfig, parseParam, parseAmount,
-    convertMinor, rate4, trendOf, fmtMoney, fmtRate, parseRates, errorWidget, layoutFor,
+    convertMinor, rate4, trendOf, fmtMoney, fmtRate, parseRates, errorWidget, sceneState, buildLiveHTML, KIT, threeTargets, targetsFor,
   };
 } else {
   await main();
