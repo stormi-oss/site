@@ -849,19 +849,71 @@ body.menu-open .site-header { background: transparent; border-bottom-color: tran
 .footer-bottom a { color: rgba(255,255,255,.85); }
 .site-footer :focus-visible { outline-color: var(--glow); }
 
-/* ---------- Cookie ---------- */
+/* ---------- Cookie ----------
+   Ненавязчивая карточка внизу: не блокирует страницу, обе кнопки одного размера и веса. */
 .cookie {
-  position: fixed; z-index: 80; left: 12px; right: 12px; bottom: 12px;
+  position: fixed; z-index: 80;
+  left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   display: grid; gap: 12px;
-  padding: 16px 18px; border-radius: var(--radius-md);
-  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
-  font-size: 14px;
-  animation: cookie-in .45s var(--ease);
+  padding: 18px 18px 16px; border-radius: 22px;
+  background: rgba(255,255,255,.96);
+  -webkit-backdrop-filter: saturate(160%) blur(12px); backdrop-filter: saturate(160%) blur(12px);
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px -24px rgba(14,17,22,.4), 0 2px 6px rgba(14,17,22,.05);
+  font-size: 14px; line-height: 1.5;
+  opacity: 0; transform: translateY(20px);
+  transition: opacity .4s var(--ease), transform .4s var(--ease);
 }
-.cookie a { color: var(--brand-dark); font-weight: 700; }
-.cookie-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.cookie-actions .btn { flex: 1 1 auto; }
-@keyframes cookie-in { from { opacity: 0; transform: translateY(16px); } }
+.cookie.is-visible { opacity: 1; transform: none; }
+.cookie:focus { outline: none; }
+.cookie:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; border-radius: 22px; }
+body.menu-open .cookie { visibility: hidden; }
+.cookie-head { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; }
+.cookie-ico {
+  width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+  background: rgba(200,241,105,.45); color: var(--ink);
+}
+.cookie-title { font-weight: 800; font-size: 15px; line-height: 1.3; }
+.cookie-text { margin-top: 2px; color: var(--ink-2); }
+.cookie-more {
+  justify-self: start; display: inline-flex; align-items: center; gap: 4px;
+  min-height: 32px; padding: 0 2px; margin: -4px 0 -4px 52px;
+  background: none; border: 0; cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--brand-dark);
+}
+.cookie-more svg { transition: transform .3s var(--ease); }
+.cookie-more[aria-expanded="true"] svg { transform: rotate(180deg); }
+.cookie-more:hover { text-decoration: underline; }
+.cookie-details { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .32s var(--ease); }
+.cookie-details > div { overflow: hidden; }
+.cookie-details.open { grid-template-rows: 1fr; }
+.cookie-details p { font-size: 13px; color: var(--ink-2); }
+.cookie-details p:first-child { padding: 10px 12px; border-radius: 12px; background: var(--bg); }
+.cookie-details p + p { margin-top: 8px; }
+.cookie-details a { color: var(--brand-dark); font-weight: 700; }
+.cookie-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cookie-btn {
+  min-height: 46px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+  font-size: 14px; font-weight: 700; line-height: 1.2;
+  transition: box-shadow .25s var(--ease), transform .25s var(--ease);
+}
+.cookie-btn--ghost { background: var(--surface); color: var(--ink); border: 1.5px solid rgba(14,17,22,.18); }
+.cookie-btn--primary { background: var(--ink); color: #fff; border: 1.5px solid var(--ink); }
+.cookie-btn:hover { box-shadow: 0 10px 20px -12px rgba(14,17,22,.5); transform: translateY(-1px); }
+.cookie-btn--ghost:hover { box-shadow: inset 0 0 0 100px rgba(14,17,22,.04), 0 10px 20px -12px rgba(14,17,22,.4); }
+.cookie-btn:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; border-radius: 999px; }
+@media (max-width: 419px) {
+  .cookie { gap: 10px; padding: 16px 16px 14px; }
+  .cookie-actions { grid-template-columns: 1fr; }
+  .cookie-btn { min-height: 44px; }
+}
+
+/* ссылка «Настройки cookie» в футере */
+.cookie-settings {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; color: rgba(255,255,255,.85); text-decoration: underline;
+}
+.cookie-settings:hover { color: #fff; }
 
 /* =========================================================
    АДАПТИВ
@@ -870,7 +922,7 @@ body.menu-open .site-header { background: transparent; border-bottom-color: tran
   .hero-cta .btn { flex: 0 0 auto; }
   .perks { grid-template-columns: repeat(3, 1fr); }
   .perk { flex-direction: column; }
-  .cookie { left: auto; right: 20px; bottom: 20px; max-width: 440px; }
+  .cookie { left: 20px; right: auto; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); width: 400px; }
 }
 
 @media (min-width: 768px) {

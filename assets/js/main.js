@@ -527,15 +527,24 @@
     if (faq.length) addLd({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": faq });
   });
 
-  /* ---------- Cookie-баннер и Яндекс Метрика (только после согласия) ---------- */
+  /* ---------- Cookie-окно и Яндекс Метрика (только после согласия) ----------
+     Правила: окно не блокирует страницу и не забирает фокус; «Принять» и «Только необходимые»
+     равнозначны; Метрика грузится только после «Принять»; выбор и его дата сохраняются;
+     изменить выбор можно ссылкой «Настройки cookie» в футере. При отзыве согласия
+     cookie Метрики удаляются и страница перезагружается, чтобы аналитика остановилась сразу. */
   safe("cookie", function () {
     var KEY = "aweron_cookie_consent";
+    var KEY_AT = "aweron_cookie_consent_at";
     var id = String(CFG.metrikaId || "").trim();
-    var banner = $(".cookie");
-    if (!/^\d+$/.test(id)) return; // Метрика не настроена — аналитических cookie нет, баннер не нужен
+    var hasMetrika = /^\d+$/.test(id);
+    var banner = $("#cookie-banner");
+    var more = banner && $(".cookie-more", banner);
+    var details = banner && $(".cookie-details", banner);
+    var opener = null;
+    var hideTimer = 0;
 
     function loadMetrika() {
-      if (window.ym) return;
+      if (!hasMetrika || window.ym) return;
       window.ym = function () { (window.ym.a = window.ym.a || []).push(arguments); };
       window.ym.l = Date.now();
       var s = document.createElement("script");
@@ -545,18 +554,78 @@
       window.ym(Number(id), "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
     }
 
-    var choice = store.get("localStorage", KEY);
-    if (choice === "all") { loadMetrika(); return; }
-    if (choice === "necessary" || !banner) return;
-
-    banner.hidden = false;
-    $all("[data-cookie]", banner).forEach(function (b) {
-      b.addEventListener("click", function () {
-        var val = b.getAttribute("data-cookie");
-        store.set("localStorage", KEY, val);
-        banner.hidden = true;
-        if (val === "all") loadMetrika();
+    function clearMetrikaCookies() {
+      var host = location.hostname, parts = host.split("."), domains = ["", host];
+      for (var i = 1; i < parts.length - 1; i++) domains.push("." + parts.slice(i).join("."));
+      document.cookie.split(";").forEach(function (c) {
+        var name = c.split("=")[0].trim();
+        if (name.indexOf("_ym") !== 0 && name !== "yandexuid") return;
+        domains.forEach(function (d) {
+          document.cookie = name + "=; Max-Age=0; path=/" + (d ? "; domain=" + d : "");
+        });
       });
+    }
+
+    function setDetails(open) {
+      if (!more || !details) return;
+      more.setAttribute("aria-expanded", open ? "true" : "false");
+      details.classList.toggle("open", open);
+      if (open) details.removeAttribute("inert"); else details.setAttribute("inert", "");
+    }
+
+    function show(byUser) {
+      if (!banner) return;
+      clearTimeout(hideTimer);
+      setDetails(false);
+      banner.hidden = false;
+      requestAnimationFrame(function () { requestAnimationFrame(function () { banner.classList.add("is-visible"); }); });
+      if (byUser) setTimeout(function () { banner.focus(); }, 60); // открыто из футера — переводим фокус в окно
+    }
+
+    function hide() {
+      if (!banner) return;
+      var hadFocus = banner.contains(document.activeElement);
+      banner.classList.remove("is-visible");
+      hideTimer = setTimeout(function () { banner.hidden = true; }, reduceMotion ? 0 : 420);
+      if (hadFocus) {
+        if (opener && document.body.contains(opener)) opener.focus();
+        else { var main = $("#main") || document.body; main.setAttribute("tabindex", "-1"); main.focus({ preventScroll: true }); }
+      }
+      opener = null;
+    }
+
+    function decide(val) {
+      var prev = store.get("localStorage", KEY);
+      store.set("localStorage", KEY, val);
+      store.set("localStorage", KEY_AT, new Date().toISOString());
+      hide();
+      if (val === "all") { loadMetrika(); return; }
+      // отзыв согласия после того, как Метрика уже работала: чистим cookie и перезагружаем страницу
+      if (prev === "all" && hasMetrika) {
+        clearMetrikaCookies();
+        if (window.ym) setTimeout(function () { location.reload(); }, reduceMotion ? 0 : 450);
+      }
+    }
+
+    var choice = store.get("localStorage", KEY);
+    if (choice === "all") loadMetrika();
+
+    if (!banner) return;
+    $all("[data-cookie]", banner).forEach(function (b) {
+      b.addEventListener("click", function () { decide(b.getAttribute("data-cookie")); });
     });
+    if (more) more.addEventListener("click", function () { setDetails(more.getAttribute("aria-expanded") !== "true"); });
+    // Esc только сворачивает подробности — закрытие без выбора не считается согласием
+    banner.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && more && more.getAttribute("aria-expanded") === "true") { setDetails(false); more.focus(); }
+    });
+    $all("[data-cookie-settings]").forEach(function (btn) {
+      btn.addEventListener("click", function () { opener = btn; show(true); });
+    });
+
+    if (choice !== "all" && choice !== "necessary") {
+      // ненавязчиво: появляется не сразу, а когда страница уже открылась
+      setTimeout(function () { show(false); }, reduceMotion ? 0 : 1200);
+    }
   });
 })();

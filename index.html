@@ -741,17 +741,32 @@
       </div>
     </div>
     <div class="container footer-bottom">
-      <p>© <span data-year>2026</span> Aweron · Самозанятый <span data-legal="name">[ФИО]</span>, ИНН <span data-legal="inn">[ИНН]</span> · <a href="privacy.html">Политика конфиденциальности</a></p>
+      <p>© <span data-year>2026</span> Aweron · Самозанятый <span data-legal="name">[ФИО]</span>, ИНН <span data-legal="inn">[ИНН]</span> · <a href="privacy.html">Политика конфиденциальности</a> · <button class="cookie-settings" type="button" data-cookie-settings>Настройки cookie</button></p>
     </div>
   </footer>
 
-  <!-- ============ COOKIE ============ -->
-  <div class="cookie" role="region" aria-label="Уведомление о cookie" hidden>
-    <p>Мы используем cookie для аналитики. Подробнее — в <a href="privacy.html">политике конфиденциальности</a>.</p>
-    <div class="cookie-actions">
-      <button class="btn btn--ghost btn--sm" type="button" data-cookie="necessary">Только необходимые</button>
-      <button class="btn btn--dark btn--sm" type="button" data-cookie="all">Принять</button>
+  <!-- ============ COOKIE ============
+       Ненавязчивое окно согласия: не блокирует страницу, кнопки равнозначны,
+       Яндекс Метрика грузится только после «Принять». Выбор меняется ссылкой «Настройки cookie» в футере. -->
+  <section class="cookie" id="cookie-banner" role="dialog" aria-modal="false" aria-labelledby="cookie-title" aria-describedby="cookie-text" tabindex="-1" hidden>
+    <div class="cookie-head">
+      <span class="cookie-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M20.5 12.2A8.5 8.5 0 1 1 11.8 3.5a3 3 0 0 0 3.7 3.7 3 3 0 0 0 5 5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.5" cy="10" r="1.2" fill="currentColor"/><circle cx="12.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="8" cy="15" r=".9" fill="currentColor"/><circle cx="16" cy="12.5" r=".9" fill="currentColor"/></svg></span>
+      <div>
+        <p class="cookie-title" id="cookie-title">Cookie и аналитика</p>
+        <p class="cookie-text" id="cookie-text">Сохраняем только ваши настройки. Яндекс Метрику подключим, только если вы разрешите.</p>
+      </div>
     </div>
-  </div>
+    <button class="cookie-more" type="button" aria-expanded="false" aria-controls="cookie-details">Подробнее <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="cookie-details" id="cookie-details" inert>
+      <div>
+        <p>Сайт использует необходимые технические механизмы браузера для сохранения ваших настроек (например, выбора в баннере о cookie). Сервис Яндекс Метрика подключается только после того, как вы нажмёте «Принять» в баннере. Если вы выбрали «Только необходимые», аналитика не загружается. Изменить выбор можно по ссылке «Настройки cookie» внизу страницы или очистив данные сайта в браузере.</p>
+        <p><a href="privacy.html#cookies">Политика конфиденциальности, раздел 8</a></p>
+      </div>
+    </div>
+    <div class="cookie-actions">
+      <button class="cookie-btn cookie-btn--ghost" type="button" data-cookie="necessary">Только необходимые</button>
+      <button class="cookie-btn cookie-btn--primary" type="button" data-cookie="all">Принять</button>
+    </div>
+  </section>
 </body>
 </html>
