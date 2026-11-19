@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Showcase</title>
+<style>
+ body{margin:0;padding:24px;background:#e9e6e1;font:14px -apple-system,system-ui,sans-serif;color:#222}
+ h2{margin:0 0 4px;font-size:16px} .note{font-size:12px;color:#666;margin-bottom:10px;max-width:400px}
+ .row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+ .phone{width:390px;height:844px;border-radius:54px;background:#000;padding:12px;box-shadow:0 20px 50px rgba(0,0,0,.3);position:relative}
+ .screen{width:100%;height:100%;border-radius:44px;overflow:hidden;position:relative}
+ .home{background:linear-gradient(180deg,#24324f,#6b5a7e 55%,#d08b78)}
+ .status{display:flex;justify-content:space-between;padding:16px 30px 0;color:#fff;font-weight:600;font-size:15px}
+ .grid{display:grid;grid-template-columns:repeat(2,158px);gap:22px;padding:22px 26px 0;justify-content:center}
+ .w{border-radius:22px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.35)} .w canvas{display:block}
+ .span2{grid-column:span 2}
+ .apps{display:grid;grid-template-columns:repeat(2,64px);gap:30px 30px;justify-content:center;align-content:center}
+ .app{width:64px;height:64px;border-radius:15px;background:rgba(255,255,255,.25)}
+ .lbl{color:#fff;font-size:11px;text-align:center;margin-top:5px;text-shadow:0 1px 2px #000}
+ .lock{background:radial-gradient(circle at 50% 30%,#3a4d7a,#0b1020 70%);color:#fff;text-align:center}
+ .time{font-size:88px;font-weight:600;letter-spacing:-2px;margin-top:6px} .date{font-size:19px;margin-top:40px;opacity:.9}
+ .acc{display:flex;gap:10px;justify-content:center;margin-top:12px}
+ .accrect{background:rgba(255,255,255,.14);backdrop-filter:blur(10px);border-radius:16px;padding:8px 12px;text-align:left;min-width:150px;white-space:pre;font:600 14px ui-monospace,Menlo,monospace}
+ .accrect .h{font:600 11px -apple-system,sans-serif;opacity:.75}
+ .inline{font:600 15px -apple-system,sans-serif;margin-top:4px;opacity:.95}
+ .app-bg{background:#f2f2f7}
+ .dim{position:absolute;inset:0;background:rgba(0,0,0,.4)}
+ .alert{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:270px;background:rgba(242,242,247,.96);border-radius:14px;text-align:center;overflow:hidden}
+ .alert .t{font-weight:600;font-size:17px;padding:18px 16px 2px;white-space:pre-line}
+ .alert .m{font-size:13px;padding:2px 16px 14px;white-space:pre-line;line-height:1.35}
+ .alert .b{border-top:1px solid #c6c6c8;color:#007aff;font-size:17px;padding:11px}
+ .alert .b.bold{font-weight:600} .field{margin:0 16px 14px;background:#fff;border:1px solid #c6c6c8;border-radius:7px;padding:6px 8px;text-align:left;font-size:14px}
+ .sheet{position:absolute;left:8px;right:8px;bottom:30px}
+ .sheet .g{background:rgba(242,242,247,.97);border-radius:14px;overflow:hidden;margin-bottom:8px;text-align:center}
+ .sheet .hd{padding:14px 16px;font-size:13px;color:#8a8a8e;border-bottom:1px solid #c6c6c8} .sheet .hd b{display:block;color:#8a8a8e;font-size:13px}
+ .sheet .o{padding:16px;color:#007aff;font-size:19px;border-bottom:1px solid #c6c6c8} .sheet .o:last-child{border:0}
+ .scriptable{position:absolute;top:0;left:0;right:0;padding:58px 20px;font-size:32px;font-weight:700}
+ .tag{font-size:12px;color:#555;margin-top:10px;text-align:center}
+</style></head><body>
+<div class="row" id="r1"></div>
+<script src="scriptable-mock.js"></script>
+<script>
+(async () => {
+  window.__MOCK_TODAY__ = '2026-11-19';
+  window.__PIXELFX_TEST__ = {};
+  const AF = Object.getPrototypeOf(async function () {}).constructor;
+  await new AF(await (await fetch('../pixel-fx.js')).text())();
+  const X = window.__PIXELFX_TEST__.exports;
+  const data = await X.loadData();
+  const ov = { season: 'autumn', tod: 'night', epoch: 900 };
+  const W = (fam, p, o = {}) => { const w = X.renderImageWidget(fam, X.resolveConfig(p, null), data, Object.assign({}, ov, o)); const c = w.backgroundImage.canvas; c.style.width = c.width / 2 + 'px'; const d = document.createElement('div'); d.className = 'w' + (fam !== 'small' ? ' span2' : ''); d.appendChild(c); return d; };
+  const phone = (title, note, cls, build) => { const col = document.createElement('div'); col.innerHTML = `<h2>${title}</h2><div class="note">${note}</div>`; const ph = document.createElement('div'); ph.className = 'phone'; const sc = document.createElement('div'); sc.className = 'screen ' + cls; ph.appendChild(sc); build(sc); col.appendChild(ph); document.getElementById('r1').appendChild(col); };
+  const status = '<div class="status"><span>22:41</span><span>●●● 􀙇 85%</span></div>';
+
+  phone('1. Экран «Домой»: «Ночное поле»', 'Маленький и средний «Ночное поле», ниже средний «Медицина». Кадр — осенняя ночь.', 'home', (sc) => {
+    sc.innerHTML = status; const g = document.createElement('div'); g.className = 'grid'; sc.appendChild(g);
+    g.appendChild(W('small', 'BYN:RUB:100:field', { trend: 'eq' }));
+    const apps = document.createElement('div'); apps.className = 'apps'; apps.innerHTML = ['Фото', 'Камера', 'Заметки', 'Карты'].map(n => `<div><div class="app"></div><div class="lbl">${n}</div></div>`).join(''); g.appendChild(apps);
+    g.appendChild(W('medium', 'BYN:RUB,USD:100:field'));
+    g.appendChild(W('medium', 'BYN:RUB,USD:100:med'));
+  });
+  phone('2. Большой виджет', 'Слева «Ночное поле» (3 валюты + график за 14 дней), под ним — тот же размер «Медицина».', 'home', (sc) => {
+    sc.innerHTML = status; const g = document.createElement('div'); g.className = 'grid'; g.style.gap = '16px'; sc.appendChild(g);
+    g.appendChild(W('large', 'BYN:RUB,USD,EUR:100:field', { season: 'summer', trend: 'up' }));
+    const m = W('medium', 'BYN:RUB,USD:100:med', { trend: 'up' }); g.appendChild(m);
+  });
+  phone('3. Экран блокировки', 'Компактные виджеты: строка над часами и прямоугольный под ними.', 'lock', (sc) => {
+    const cfg = X.resolveConfig('BYN:RUB,USD:100', null);
+    const inl = X.renderAccessory('accessoryInline', cfg, data).items.map(i => i.text).join('');
+    const rect = X.renderAccessory('accessoryRectangular', cfg, data).items.map(i => i.text);
+    sc.innerHTML = `<div class="date">Четверг, 19 ноября</div><div class="inline">${inl}</div><div class="time">22:41</div>
+      <div class="acc"><div class="accrect"><div class="h">${rect[0]}</div>${rect.slice(1).join('\n')}</div></div>`;
+  });
+  // окна приложения — тексты из реальной логики скрипта
+  const cfg = X.resolveConfig('BYN:RUB,USD:100', null);
+  const rows = cfg.targets.map(t => { const v = X.fmtMoney(X.convertMinor(10000n, 'BYN', t, data.rates)); const tr = X.trendOf('BYN', t, data.rates, data.prevRates); return `${v} ${t} ${({ up: '▲', down: '▼', eq: '=' })[tr] || ''}`; });
+  const rates = cfg.targets.map(t => `1 BYN = ${X.fmtRate(X.rate4('BYN', t, data.rates))} ${t}`);
+  phone('4. Меню приложения', 'Повторный запуск скрипта в Scriptable. При первом запуске вместо меню — мастер из 4 шагов.', 'app-bg', (sc) => {
+    sc.innerHTML = `<div class="scriptable">Курсы</div><div class="dim"></div><div class="sheet"><div class="g"><div class="hd"><b>Курсы НБРБ · v2.0.0</b>100 BYN → RUB, USD</div>
+      ${['Конвертер', '✨ Живая сцена', 'Настройки', 'Посмотреть виджет', 'Тест сцен (сезон, время)', 'Обновить курсы'].map(o => `<div class="o">${o}</div>`).join('')}</div><div class="g"><div class="o" style="font-weight:600">Закрыть</div></div></div>`;
+  });
+  phone('5. Конвертер: ввод суммы', 'Открывается по нажатию на виджет — с валютами именно этого виджета.', 'app-bg', (sc) => {
+    sc.innerHTML = `<div class="scriptable">Курсы</div><div class="dim"></div><div class="alert"><div class="t">Конвертер</div><div class="m">Сколько BYN?</div><div class="field">100</div><div class="b bold">Посчитать</div><div class="b">Закрыть</div></div>`;
+  });
+  phone('6. Конвертер: результат', 'Кнопки: копировать, поменять направление, другая сумма, живая сцена.', 'app-bg', (sc) => {
+    sc.innerHTML = `<div class="scriptable">Курсы</div><div class="dim"></div><div class="alert"><div class="t">100 BYN =</div><div class="m">${rows.join('\n')}\n\n${rates.join('\n')}\nКурс НБРБ на 19.11.2026</div>
+      ${['Скопировать', 'Поменять направление (RUB → BYN)', 'Другая сумма', '✨ Живая сцена'].map(b => `<div class="b">${b}</div>`).join('')}<div class="b bold">Готово</div></div>`;
+  });
+  document.title = 'ready';
+})().catch(e => { document.body.textContent = e.stack; document.title = 'error'; });
+</script></body></html>
