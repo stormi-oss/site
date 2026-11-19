@@ -38,9 +38,9 @@ window.AWERON_CONFIG = {
     support: 3000,      // Поддержка, ₽/мес
 
     // «Похожий проект — от …» в секции «Работы»
-    caseVorontsov: 34990, // сайт vorontsov.lab — 8 страниц, блог, тёмная тема
-    caseZerAlg: 89990,    // приложение Windows/macOS + сайт ZernovAlg
-    caseLangVor: 129990,  // приложение LangVor — база, проверка текста, повторение слов
-    caseAweron: 24990     // лендинг Aweron — демо, форма → Telegram, SEO
+    caseVorontsov: 23990, // сайт vorontsov.lab — 8 страниц, блог, тёмная тема
+    caseZerAlg: 32990,    // приложение Windows/macOS + сайт ZernovAlg
+    caseLangVor: 38990,  // приложение LangVor — база, проверка текста, повторение слов
+    caseAweron: 17990     // лендинг Aweron — демо, форма → Telegram, SEO
   }
 };
