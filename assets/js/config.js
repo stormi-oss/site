@@ -8,7 +8,7 @@ window.AWERON_CONFIG = {
   formEndpoint: "",
 
   // Ссылка на Telegram. Замените [username] на ваш ник.
-  telegramUrl: "https://t.me/[username]",
+  telegramUrl: "https://t.me/aweronn_bot",
 
   // ID счётчика Яндекс Метрики (только цифры). Пусто — Метрика и cookie-баннер не подключаются.
   metrikaId: "",
@@ -17,14 +17,14 @@ window.AWERON_CONFIG = {
   siteUrl: "https://aweron.ru",
 
   contacts: {
-    telegram: "@username",  // как показывать ник в футере
+    telegram: "@aweronn_bot", // как показывать ник в футере
     phone: "",              // например "+7 900 000-00-00"
     email: "",              // например "hello@aweron.ru"
     vk: ""                  // например "https://vk.com/aweron"
   },
 
   legal: {
-    name: "[ФИО]",          // ФИО самозанятого
+    name: "Воронцов Роман Сергеевич", // ФИО самозанятого
     inn: "[ИНН]",           // ИНН
     // Дата текущей редакции согласия на обработку ПДн (consent.html). Меняйте при каждой правке текста согласия:
     // она показывается на странице и уходит в каждой заявке (consent_version) как доказательство, какую редакцию принял человек.
